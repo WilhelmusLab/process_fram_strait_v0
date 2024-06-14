@@ -1,0 +1,137 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2576
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fmodern\fcharset0 Courier;\f2\fnil\fcharset0 Menlo-Regular;
+}
+{\colortbl;\red255\green255\blue255;\red160\green32\blue240;\red0\green0\blue0;\red255\green255\blue255;
+}
+{\*\expandedcolortbl;;\csgenericrgb\c62745\c12549\c94118;\csgenericrgb\c0\c0\c0\c85000;\csgenericrgb\c100000\c100000\c100000;
+}
+\margl1440\margr1440\vieww19420\viewh12220\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 These are the steps to run a year and region of the Poles\
+\
+Steps: \
+1) Select region of interest and dates (I do March 31-Sept 19)\
+\
+2) Download images using shell script (OR PYTHON)\
+	-important: after midnight the clock resets so make sure you don\'92t leave the script running overnight\
+	-use get_data_wview.sh for True Color Reflectance images\
+	-use get_reflectance_data_wview.sh for False Color Reflectance images\
+	-remember, you have to run this twice for each satellite (once for Aqua and once for Terra)\
+	-modify variables:\
+		jul_day= day of the year\
+		inp=satellite: use 1 for Terra and 2 for Aqua\
+		i= days ago from today\'92s date to start download	\
+		while ($i>X)      X is the day when download stops\
+		t2= modify depending on size of bounding box and layers you want to add\
+		out_f= don\'92t forget to change name to region of interest\
+\pard\tx593\pardeftab593\pardirnatural\partightenfactor0
+\cf0 		\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 3) Download Land image using get_Land.sh (OR PYTHON)\
+	-modify ONLY:\
+		t2: match the get_data_wview.sh	\
+		t3: ONLY modify the WIDTH and HEIGHT to be that of your image\
+\
+4) Use ONE image (ANY of your True Color dispersion will do) as your reference image and place it into your info folder\
+	-name is:NE_Greenland.2017100.terra.250m\
+	-this is just to get the geotif information from your images \
+\
+5) If you know of a section on your image that you do not want to process, you can use the mask.tif option. mask.tif has to have the same number of columns and rows as a worldview image. To make this image I recommend using the Land.tif image. Opening ImageJ. Superimpose a white box on top of Land.tif. Then with polygon tool, make a black shape covering the area that you wish to ignore. Make sure this is a black and white binary image (pixels must be 0\'92s and 1\'92s)\
+	-around line 1017: \
+\pard\pardeftab720\partightenfactor0
+
+\f1\fs20 \cf0 		cd(strcat(HOME,\cf2 '/input/info'\cf0 ))
+\fs24 \
+
+\fs20 		mask_bw=imread(\cf2 'mask.tif'\cf0 );
+\fs24 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0 \cf0 	-otherwise you can comment those lines and say: \
+\pard\pardeftab720\partightenfactor0
+
+\f1\fs20 \cf0 		mask_bw=BW7;\
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs24 \cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+6) Modify satellite excel file to year/area desired by manually identifying trajectories for 16 days (satellites have a repeat cycle of 16 days)\
+	-Go to https://worldview.earthdata.nasa.gov/\
+	-add layer orbital track & overpass time>> Aqua/Space-Track.org>>Ascending/Day\
+	-add layer orbital track & overpass time>> Terra/Space-Track.org>>Descending/Day\
+\
+\
+\
+You need to main folders: input and output folders\
+1) input folder must contain these folders, which you need to populate before running the script:\
+	-info: -ArcticMappingTools folder\
+	         -inpaint_nans.m\
+	         -mat2tiles.m	\
+	         -match_corr.m\
+	         -polarstereo_inv.m\
+	         -inpaint_nans.m\
+	         -Land.tif\
+	         -NE_Greenland.2017100.terra.250m.tif\
+	         -sat_200X.xlsx\
+	\
+	-images: all your True Color Images \
+	-images_reflectance: all your False Color Images\
+2) output folder must contain these folders, which are all empty but need to have them in to save files:\
+	-
+\f2 \cf3 \cb4 adapt_hist BW1 BW2 BW3 BW4 BW5 BW cloud1 cloud2 cloud3  BW_nice  centroids centroids_nice centroids_ugly contours final final2 final2_aqua final2_terra masked order pdf_aqua pdf_terra raw_black  raw_grey  raw_white rotation_aqua rotation_terra rotation1_aqua rotation1_terra scatter_aqua scatter_terra single_particle tracked tracked_single;\
+
+\f0 \cf0 \cb1 	**NOTE: inside single_particle, create another folder called plots_NSIDC\
+\
+input >> info >> match_corr.m\
+1) Change the directory address, HOME \
+\
+\
+If you will do a single dispersion analysis, you need to download NSIDC file with sea ice velocity field\
+input >> info >> nsidc_file\
+https://nsidc.org/data/nsidc-0116\
+\
+\
+Matlab script\
+At the top of the Matlab script:\
+1) Change directory adress\
+\
+2) Change variables depending on your image, year and region you are looking at\
+	-A1: number of pixels in a tile\'92s column (take size of the image and divide the columns into the number of tiles you want. Make it a number so that you have more or less between 500 to1200 pixels in a tile, depending on your image, i.e., image with 4458x8120 pixels, take 8120/8=1015; A1=1015\
+	-A2:  number of pixels in a tile\'92s row (take size of the image and divide the rows into the number of tiles you want. Make it a number so that you have more or less between 500 to1200 pixels in a tile, depending on your image, i.e., image with 4458x8120 pixels, take 4458/6=743; A1=743\
+	\
+3) Change BEGINNING and check with datedisp to match your start date\
+\
+4) Do a search with ctrl+f and find the 2 places where aqua_pass occurs. This is the satellite information from the excel file. Change 
+\f1\fs20 \cf2 'sat_202X.xlsx'\cf0 ,\cf2 'AXX:AXXX\'92, \'91BXX:BXXX\'92 
+\f0\fs24 \cf0 to your starting and end date.\
+\
+\
+\
+\
+Important OUTPUT variables description:\
+The following variables will be produced from the image processing module: \
+-delta_t.mat			time difference between images (min)\
+-FLOE_LIBRARY.mat	library of ice floes shapes. You can do this, for example, to see shapes: figure,imshow(FLOE_LIBRARY\{2,1\})\
+-order.mat			takes the satellite information from the excel file to arrange the order of your images. This should be in numeric order unless the images are captured very sporadic\
+-prop.mat			This is an important array, which contains the information about every ice floe that you have identified in your images. All the units are in pixels and the order of the rows is random but the columns have the following variables: 
+\f1\fs20 \cf2 'Area'\cf0 ,\cf2 'Centroid'\cf0 ,\cf2 'MajorAxisLength'\cf0 ,\cf2 'MinorAxisLength'\cf0 ,\cf2 'Orientation'\cf0 ,\cf2 'Perimeter'\cf0 , \cf2 'BoundingBox'\cf0 , \cf2 'ConvexArea'\cf0 ,\cf2 'Solidity'\cf0 \
+
+\f0\fs24 -sat_order.mat		Arranges the order of satellites as per the excel satellite file, aqua=0 and terra=1\
+\
+\
+The following variables will be produced from the tracker module:\
+-final_tracker.mat		area, perm, maj_axis, min_axis, x_cent, y_cent, lat, lon, displacement distance [ALL IN PIXELS]. \
+				This is a matrix array of \{X,Y,Z\}. X corresponds to an ice floe. Y is the variables described above. Z is time series.\
+				So to take a look at the major axis of ice floe corresponding to row 5 on day 7, you would call final_tracker(5,3,7)\
+-old_data.mat		this is used by the tracking module to reorganize the ice floes to make a 3D matrix, you won\'92t need to use it but the algorithm uses it.	\
+\
+\
+The following variables will be produced from the tracker module:\
+-DATA_THETA.mat 		daily rotation measurements of sea ice (degrees)\
+-DATA_aqua			daily rotation measurements for one satellite (AQUA)\
+\
+\
+\
+}

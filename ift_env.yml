@@ -1,0 +1,11 @@
+name: ift_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - pandas
+  - python=3.9.13
+  - rasterio
+  - scipy
+prefix: /opt/miniconda3/envs/ift_env
