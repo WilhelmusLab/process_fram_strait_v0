@@ -1,4 +1,6 @@
-"""Convert the FLOE_LIBRARY matlab files into GeoTiffs matching the shape of the reference image."""
+"""Convert the FLOE_LIBRARY matlab files into GeoTiffs matching the shape of the reference image.
+Tested for 2019. Need to examine reasons for 2020 not working right.
+"""
 import numpy as np
 import os
 import pandas as pd
@@ -7,10 +9,10 @@ from scipy.io import loadmat
 
 
 # Folder with MODIS imagery and where the GeoTiffs should be stored
-saveloc = '../../data/floe_tracker/dataset/'
+dataloc = '../../data/floe_tracker/dataset/'
 
 # Set the year to process
-year = 2020
+year = 2019
 
 # Format for the year folders is fram_strait-YYYY
 year_folder = 'fram_strait-{y}'.format(y=year)
@@ -33,7 +35,7 @@ def get_month_folder(date):
     return '-'.join(['fram_strait', start, end])
 
 # Load reference image
-im_ref = rio.open('../data/floe_tracker/unparsed/NE_Greenland.2017100.terra.250m.tif')
+im_ref = rio.open('../data/NE_Greenland.2017100.terra.250m.tif')
 im = im_ref.read()
 nlayers = 1
 nrows = im.shape[1]
@@ -63,15 +65,15 @@ for date_idx in info_df.index:
         # this is the centroid - just need to check that we're in the right area
         x = data.x_stere
         y = data.y_stere
-        ri, ci = im_new.index(x, y)
-        ri = r - ri
-    
+        ri, ci = im_ref.index(x, y)
+        ri = nrows - ri
         floe_image = floelib['FLOE_LIBRARY'][data.orig_idx, date_idx]
         floe_image = np.ma.masked_array(floe_image, floe_image==0)[::-1,:].copy()
         left_x = int(np.floor(data.bbox1))
         right_x = int(left_x + data.bbox3 + 1)
-        top_y = r - int(np.floor(data.bbox2))
+        top_y = nrows - int(np.floor(data.bbox2))
         bottom_y = int(top_y - data.bbox4 - 1)
+
         segmented_image[0, bottom_y:top_y, left_x:right_x] += floe_image * data.orig_idx
 
     month_folder = get_month_folder(info_df.loc[date_idx, 'SOIT time'])
@@ -83,11 +85,11 @@ for date_idx in info_df.index:
     os.makedirs(saveloc, exist_ok=True)
     new_file = rio.open(saveloc + '/' + fname, 'w',
                         driver='GTiff',
-                        height=im_new.meta['height'],
-                        width=im_new.meta['width'],
+                        height=im_ref.meta['height'],
+                        width=im_ref.meta['width'],
                         count=1,
                         dtype='uint16',
-                        crs=im_new.meta['crs'],
-                        transform=im_new.meta['transform'])
+                        crs=im_ref.meta['crs'],
+                        transform=im_ref.meta['transform'])
     new_file.write(segmented_image[0,::-1,:], 1)
     new_file.close()
