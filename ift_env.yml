@@ -9,4 +9,5 @@ dependencies:
   - rasterio
   - scipy
   - scikit-learn
+  - scikit-image
 prefix: /opt/miniconda3/envs/ift_env
