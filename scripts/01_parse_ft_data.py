@@ -175,7 +175,7 @@ def parser_ift(year, dataloc, ref_image_loc):
                 columns=['area','perimeter','major_axis','minor_axis',
                          'orientation','x_pixel', 'y_pixel','convex_area','solidity',
                          'bbox1', 'bbox2', 'bbox3','bbox4'])
-            p_df['orig_idx'] = p_df.index + 1
+            p_df['orig_idx'] = p_df.index + 1 # Keeping index in matlab convention, so that floe labels in images are nonzero
             p_df['satellite'] = df_by_date[date].satellite.values[0] 
             p_df['floe_id'] = 'unmatched'
             p_df['datetime'] = date
