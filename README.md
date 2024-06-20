@@ -1,4 +1,9 @@
-# Sea Ice Segmentation and Tracking using Ice Floe Tracker
+# Greenland Sea Ice Floe Segmentation and Tracking Via the Ice Floe Tracker Algorithm
+The Ice Floe Tracker (IFT) algorithm was developed by Rosalinda Lopez-Acosta to process moderate resolution optical satellite imagery for the retrieval of sea ice floe shapes and dynamics. IFT takes a feature matching (FM) approach to sea ice tracking, extracting ice floe borders from imagery then using a boundary correlation method to identify floe displacement and rotation in subsequent images. For her thesis work (Lopez-Acosta, 2021), images from the Moderate Resolution Imaging Spectroradiometer from 2003-2020 were processed for the Beaufort Sea (Manucharyan et al., 2022) and for the Greenland Sea south of the Fram Strait. The results from the latter were used in her dissertation and have been previously presented in Watkins et al., 2023.
+
+This dataset collects the Greenland Sea results, converted from proprietary MATLAB format into open GeoTiff and CSV format. MATLAB data and script files are included as well as Python scripts to read and format the MATLAB data.  We additionally use a logistic regression classifier to remove false positives from the dataset. The original segmentation results are saved as "labeled_raw" and the results with flagged flase positives removed is saved as "labeled_clean". Access to additional datasets, in the form of true and false color MODIS imagery and sea ice concentration data, is required, and is included in the data repository but due to size limitations not included in the GitHub repository.
+
+
 ## Reprocessing Algorithm Results from Lopez-Acosta (2021)
 MODIS imagery from the East Greenland Sea south of Fram Strait for the years 2003-2020 was processed by Rosalinda Lopez-Acosta for her PhD dissertation "Sea Ice Drift in Arctic Marginal Ice Zones Derived from Optical Satellite imagery". The image processing and analysis was carried out using MATLAB software. This repository contains code to extract data from the MATLAB output and convert it into cross-platform readable GeoTiff and CSV files for broader public release.
 
@@ -34,3 +39,19 @@ Data structure for the tracked_floes tables:
 
 ## Extracting floe shapes
 Floe shapes are stored in a MATLAB structure `FLOE_LIBRARY.mat`. This structure efficiently holds the sparse dataset of labeled floe shapes. However it is not easily visualized or shared, as it is not self-describing. The script `02_extract_shapes.py` reads the data in the FLOE LIBRARY and in the floe property tables, then creates a GeoTiff sharing dimensions and coordinate reference system with the reference image `NE_Greenland.2017100.terra.250m.tif`. The file produced is an unfiltered segmented image where the labels of each floe correspond to the index in the FLOE_LIBRARY. A tracked floe will have different label numbers in each image. 
+
+## Cleaning dataset using logistic regression function
+The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives.
+
+### References
+Buckley, E., Cañuelas, Timmermans, M.-L., and Wilhelmus, M. M. (2023), "Seasonal Evolution of the Sea Ice Floe Size Distribution from Two Decades of MODIS Data," EGUsphere (preprint), https://doi.org/10.5194/egusphere-2024-89
+
+Lopez-Acosta, R. (2021), "Sea Ice Drift in Arctic Marginal Ice Zones Derived from Optical Satellite Imagery" Doctoral dissertation, University of California Riverside. 162 pages.
+
+Lopez-Acosta, R., Schodlok, M. P., and Wilhelmus, M. M. (2019). "Ice Floe Tracker: An algorithm to automatically retrieve Lagrangian trajectories via feature matching from moderate-resolution visual imagery", Remote Sensing of Environment, 234, 111406, pp. 1-15. DOI:10.1016/j.rse.2019.111406
+
+Manucharyan, G., Lopez-Acosta, R., and Wilhelmus, M. M. (2022), "Spinning ice floes reveal intensification of mesoscale eddies in the western Arctic Ocean", Scientific Reports, 12, 7070, pp. 1-13
+
+Pedregosa et al. (2011), "Scikit-learn: Machine Learning in Python", Journal of Machine Learning Research, 12, pp. 2825-2830, 2011.
+
+Watkins, D. M., Bliss, A. C., Hutchings, J. K., Wilhelmus, M. M. (2023), "Evidence of abrupt transitions between sea ice dynamical regimes in the East Greenland marginal ice zone", Geophysical Research Letters, 50, e2023GL103558, pp. 1-10

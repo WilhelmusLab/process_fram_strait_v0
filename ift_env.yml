@@ -8,4 +8,5 @@ dependencies:
   - python=3.9.13
   - rasterio
   - scipy
+  - scikit-learn
 prefix: /opt/miniconda3/envs/ift_env

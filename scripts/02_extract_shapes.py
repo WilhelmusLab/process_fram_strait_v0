@@ -12,7 +12,7 @@ from scipy.io import loadmat
 dataloc = '../../data/floe_tracker/dataset/'
 
 # Set the year to process
-year = 2019
+year = 2017
 
 # Format for the year folders is fram_strait-YYYY
 year_folder = 'fram_strait-{y}'.format(y=year)
@@ -52,8 +52,8 @@ all_props['date_idx'] = -1
 for date_idx in info_df.index:
     all_props.loc[all_props.datetime == info_df.loc[date_idx, 'SOIT time'], 'date_idx'] = date_idx
 
+# TBD: test adjustments for the 2020 differences in coordinates
 for date_idx in info_df.index:
-    
     # Grab the subset matching the date
     df = all_props.loc[all_props.date_idx == date_idx] 
 
