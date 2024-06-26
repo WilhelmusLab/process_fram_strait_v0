@@ -12,7 +12,7 @@ from scipy.io import loadmat
 dataloc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
 
 # Set the year to process
-for year in [2016, 2017]:
+for year in [2012]:
     
     # Format for the year folders is fram_strait-YYYY
     year_folder = 'fram_strait-{y}'.format(y=year)
