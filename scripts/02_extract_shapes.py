@@ -6,13 +6,13 @@ import os
 import pandas as pd
 import rasterio as rio
 from scipy.io import loadmat
-
+from skimage.transform import resize
 
 # Folder with MODIS imagery and where the GeoTiffs should be stored
 dataloc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
 
 # Set the year to process
-for year in [2012]:
+for year in [2020]:
     
     # Format for the year folders is fram_strait-YYYY
     year_folder = 'fram_strait-{y}'.format(y=year)
@@ -61,19 +61,56 @@ for year in [2012]:
         count = 1
         segmented_image = np.zeros((nlayers, nrows, ncols))
         for row, data in df.iterrows():
-            # this is the centroid - just need to check that we're in the right area
-            x = data.x_stere
-            y = data.y_stere
-            ri, ci = im_ref.index(x, y)
-            ri = nrows - ri
+            ri, ci = im_ref.index(data.x_stere, data.y_stere)
             floe_image = floelib['FLOE_LIBRARY'][data.orig_idx - 1, date_idx]
-            floe_image = np.ma.masked_array(floe_image, floe_image==0)[::-1,:].copy()
+
+            
+            if year == 2020:
+                # Resize image to have correct pixel size
+                info_region_pixel_scale_x = 200.36
+                info_region_pixel_scale_y = 216.605
+                new_size = (int(floe_image.shape[0]*info_region_pixel_scale_y / 256), int(floe_image.shape[1]*info_region_pixel_scale_x / 256))
+                
+                dx = (floe_image.shape[0] - new_size[0])/2
+                if dx == int(dx):
+                    left_pad = int(dx)
+                    right_pad = int(dx)
+                else:
+                    left_pad = int(np.floor(dx))
+                    right_pad = int(np.ceil(dx))
+                dy = (floe_image.shape[1] - new_size[1])/2
+                if dy == int(dy):
+                    top_pad = int(dy)
+                    bottom_pad = int(dy)
+                else:
+                    top_pad = int(np.floor(dy))
+                    bottom_pad = int(np.ceil(dy))
+                floe_image = np.pad(resize(floe_image, new_size, order=0), ((left_pad, right_pad), (bottom_pad, top_pad)))
+
+            
+            floe_image = np.ma.masked_array(
+                floe_image, floe_image==0)[::-1,:].copy()
+
+            # Coordinates of top corner
             left_x = int(np.floor(data.bbox1))
-            right_x = int(left_x + data.bbox3 + 1)
             top_y = nrows - int(np.floor(data.bbox2))
+            
+            if year == 2020:     
+                # Use centroid positions to shift into the
+                # correct locations
+                cx = data.x_pixel
+                rx = data.y_pixel
+                left_x = int(left_x - cx + ci)
+                top_y = nrows - int(np.floor(data.bbox2) - rx + ri)
+                top_y = int(top_y)
+
+            # Coordinates of bottom corner found w/ height and width
+            right_x = int(left_x + data.bbox3 + 1)
             bottom_y = int(top_y - data.bbox4 - 1)
-    
-            segmented_image[0, bottom_y:top_y, left_x:right_x] += floe_image * data.orig_idx
+            
+            if segmented_image[0, bottom_y:top_y, left_x:right_x].shape == floe_image.shape:
+                if (ri > 0) & (ci > 0):
+                    segmented_image[0, bottom_y:top_y, left_x:right_x] += floe_image * data.orig_idx
     
         month_folder = get_month_folder(info_df.loc[date_idx, 'SOIT time'])
         
