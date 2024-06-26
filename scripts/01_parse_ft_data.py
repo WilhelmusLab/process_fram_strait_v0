@@ -127,22 +127,22 @@ def parser_ift(year, dataloc, ref_image_loc):
             # The images from 2020 reference a different image and
             # are stretched in the y direction. This applies a linear correction.
             # We first shift from pixels to stereographic
-            info_region_pixel_scale_x = 200.2979
-            info_region_pixel_scale_y = 208.3310
-            x_cropped = 2.0080e+05
-            y_cropped = -3.1754e+05
+            info_region_pixel_scale_x = 200.36
+            info_region_pixel_scale_y = 216.605
+            x_cropped = 2.0070e5
+            y_cropped = -3.1744e5
             df['x_stere'] = x_cropped + df['x_pixel'] * info_region_pixel_scale_x
             df['y_stere'] = y_cropped - df['y_pixel'] * info_region_pixel_scale_y
         
             # Then we stretch the image vertically
-            left=200704
-            bottom=-2009088.0
-            right=1093632.0
-            top=-317440.0
-            adjustment = 63.8e3
-            A = ((top - bottom) + adjustment)/(top - bottom)
-            B = top * (1 - A)
-            df['y_stere'] = A*df['y_stere'] + B
+            # left=200704
+            # bottom=-2009088.0
+            # right=1093632.0
+            # top=-317440.0
+            # adjustment = 63.8e3
+            # A = ((top - bottom) + adjustment)/(top - bottom)
+            # B = top * (1 - A)
+            # df['y_stere'] = A*df['y_stere'] + B
 
     # Extract the EPSG code for the coordinate reference system from the reference image
     # then use PyProj to convert to longitude and latitude
@@ -216,22 +216,26 @@ def parser_ift(year, dataloc, ref_image_loc):
         # The images from 2020 reference a different image and
         # are stretched in the y direction. This applies a linear correction.
         # We first shift from pixels to stereographic
-        info_region_pixel_scale_x = 200.2979
-        info_region_pixel_scale_y = 208.3310
-        x_cropped = 2.0080e+05
-        y_cropped = -3.1754e+05
-        df_all_props['x_stere'] = x_cropped + df_all_props['x_pixel'] * info_region_pixel_scale_x
-        df_all_props['y_stere'] = y_cropped - df_all_props['y_pixel'] * info_region_pixel_scale_y
-    
-        # Then we stretch the image vertically
+        info_region_pixel_scale_x = 200.36
+        info_region_pixel_scale_y = 216.605  # original was 208
+        
         left=200704
         bottom=-2009088.0
+        # bottom = -1944710 # One option would be if the top of the black section is the right reference point, rather than the bottom
         right=1093632.0
         top=-317440.0
-        adjustment = 63.8e3
-        A = ((top - bottom) + adjustment)/(top - bottom)
-        B = top * (1 - A)
-        df_all_props['y_stere'] = A*df_all_props['y_stere'] + B
+        x_origin = 2.0080e+05
+        y_origin = -3.1754e+05
+        
+        df_all_props['x_stere'] = left + df_all_props['x_pixel'] * info_region_pixel_scale_x
+        df_all_props['y_stere'] = top - df_all_props['y_pixel'] * info_region_pixel_scale_y
+    
+        # Then we stretch the image vertically
+        # adjustment = 63.8e3
+        # A = ((top - bottom) + adjustment)/(top - bottom)
+        # B = top * (1 - A)
+        # df_all_props['y_stere'] = A*df_all_props['y_stere'] + B
+        
     else:
         x_stere, y_stere = ref_raster.xy(row=df_all_props['y_pixel'], col=df_all_props['x_pixel'])
         df_all_props['x_stere'] = x_stere
