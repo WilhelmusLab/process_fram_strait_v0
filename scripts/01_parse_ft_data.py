@@ -24,6 +24,7 @@ from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
 saveloc = '../data/'
+saveloc_archive = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
 dataloc = '../data/matlab_output/' 
 ref_image_loc = '../data/NE_Greenland.2017100.terra.250m.tif'
 sic_loc = '/Users/dwatkin2/Documents/research/data/nsidc_daily_cdr/'
@@ -276,6 +277,8 @@ def interp_sic(position_data, sic_data):
 
 
 for year in range(2003, 2021):
+    year_folder = 'fram_strait-{y}'.format(y=year)
+    
     print(year)
     df, props = parser_ift(year=year,
             dataloc=dataloc,
@@ -299,6 +302,10 @@ for year in range(2003, 2021):
 
         sic = interp_sic(props, ds)
         props['nsidc_sic'] = np.round(sic, 2)
-    
+    ## Save locally
     df.to_csv(saveloc + 'tracked_floes/ift_tracked_floes_{y}.csv'.format(y=year))
     props.to_csv(saveloc + 'all_floes/ift_floe_properties_{y}.csv'.format(y=year))
+
+    ## Save to archive
+    df.to_csv(saveloc_archive + year_folder + '/ift_all_tracked_floes_{y}.csv'.format(y=year))
+    props.to_csv(saveloc_archive + year_folder + '/ift_all_floe_properties_{y}.csv'.format(y=year))

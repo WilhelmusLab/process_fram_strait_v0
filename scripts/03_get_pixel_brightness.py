@@ -29,7 +29,7 @@ def get_month_folder(date):
     
     return '-'.join(['fram_strait', start, end])
 
-for year in range(2013, 2014):
+for year in [2007, 2008, 2020]:
     ift_loc = '../data/all_floes/' # Output from the interpolate ift file
     #### Load ift data
     ift_df = pd.read_csv(ift_loc + 'ift_floe_properties_{y}.csv'.format(y=year), index_col=0)

@@ -12,7 +12,7 @@ from skimage.transform import resize
 dataloc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
 
 # Set the year to process
-for year in [2020]:
+for year in range(2003, 2021):
     
     # Format for the year folders is fram_strait-YYYY
     year_folder = 'fram_strait-{y}'.format(y=year)
@@ -69,8 +69,10 @@ for year in [2020]:
                 # Resize image to have correct pixel size
                 info_region_pixel_scale_x = 200.36
                 info_region_pixel_scale_y = 216.605
-                new_size = (int(floe_image.shape[0]*info_region_pixel_scale_y / 256), int(floe_image.shape[1]*info_region_pixel_scale_x / 256))
-                
+                new_size = (int(floe_image.shape[0]*info_region_pixel_scale_x / 256), 
+                            int(floe_image.shape[1]*info_region_pixel_scale_y / 256))
+
+                # Define zero padding
                 dx = (floe_image.shape[0] - new_size[0])/2
                 if dx == int(dx):
                     left_pad = int(dx)
@@ -108,8 +110,8 @@ for year in [2020]:
             right_x = int(left_x + data.bbox3 + 1)
             bottom_y = int(top_y - data.bbox4 - 1)
             
-            if segmented_image[0, bottom_y:top_y, left_x:right_x].shape == floe_image.shape:
-                if (ri > 0) & (ci > 0):
+            if (ri > 0) & (ci > 0):
+                if segmented_image[0, bottom_y:top_y, left_x:right_x].shape == floe_image.shape:
                     segmented_image[0, bottom_y:top_y, left_x:right_x] += floe_image * data.orig_idx
     
         month_folder = get_month_folder(info_df.loc[date_idx, 'SOIT time'])
@@ -119,6 +121,8 @@ for year in [2020]:
                                                l=label)
         saveloc = os.path.join(dataloc, year_folder, month_folder, label)
         os.makedirs(saveloc, exist_ok=True)
+
+        # Use rasterIO to save the array as a geotiff with the same georeferencing as the original image
         new_file = rio.open(saveloc + '/' + fname, 'w',
                             driver='GTiff',
                             height=im_ref.meta['height'],
