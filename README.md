@@ -35,13 +35,49 @@ The MATLAB code produces files with floe properties and floe positions for (a) a
 
 Data structure for the all_floes tables:
 
-Data structure for the tracked_floes tables:
+|Column|Description|Units|
+|---|---|---|
+|'area'| | |
+|'perimeter'| | |
+|'major_axis'| | |
+|'minor_axis'| | |
+|'orientation'| | |
+|'x_pixel'| Column coordinate in the original image |
+|'y_pixel'| Row coordinate in the original image |
+|'convex_area'| Area of the best-fit convex polygon |
+|'solidity'| Ratio of area to convex area | Unitless |
+|'bbox1'| | |
+|'bbox2'| | |
+|'bbox3'| | |
+|'bbox4'| | |
+|'orig_idx'|Index of row in floe property table in Matlab files| NA |
+|'satellite'|Name of satellite| NA |
+|'floe_id'|Unique label assigned to tracked floes|YYYY_NNNNN|
+|'datetime'|Time of satellite overpass of the image centroid|YYYY-mm-dd HH:MM|
+|'x_stere'|X-position of the floe centroid in NSIDC N. Polar Stereographic|meters|
+|'y_stere'|Y-position of the floe centroid in NSIDC N. Polar Stereographic|meters|
+|'longitude'|Longitude of the floe centroid|Decimal Degrees|
+|'latitude'|Latitude of the floe centroid|Decimal Degrees|
+|'nsidc_sic'|Sea ice concentration of nearest grid cell from NSIDC CDR|Fraction|
+|'label'|Integer object label in the segmented image| NA |
+
+### TBD for property tables:
+* Add area, perimeter in km
+* Fix order of columns, names to match updates
+* Set it up so that the pixel brightness table is the one saved to the archive
+* Change the column order so ID information comes first
+* Convert the x_pixel/y_pixel and bounding boxes for the 2020 data to reflect the position in the final image
 
 ## Extracting floe shapes
 Floe shapes are stored in a MATLAB structure `FLOE_LIBRARY.mat`. This structure efficiently holds the sparse dataset of labeled floe shapes. However it is not easily visualized or shared, as it is not self-describing. The script `02_extract_shapes.py` reads the data in the FLOE LIBRARY and in the floe property tables, then creates a GeoTiff sharing dimensions and coordinate reference system with the reference image `NE_Greenland.2017100.terra.250m.tif`. The file produced is an unfiltered segmented image where the labels of each floe correspond to the index in the FLOE_LIBRARY. A tracked floe will have different label numbers in each image. 
 
+TBD: see if there's a way to more accurately calculate the resize coefficients for the 2020 data.
+
+## Get floe properties
+Floe properties were initially calculated in MATLAB and are saved by the `01_parse_ft_data.py` script. There are differences in the algorithms used by scikit image region properties function and the identically named function in MATLAB. For future compatibility with the IFT Julia version, which uses scikit image, we recalculate region properties and add these to the floe property tables. This step also allows us to get consistent bounding boxes and row/col centroid data for the shapes. Using the shapes extracted in the previous step, and the truecolor and falsecolor images, we get the mean intensity for each color channel within each floe. This data is used for filtering true and false positives from the floe property tables.
+
 ## Cleaning dataset using logistic regression function
-The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives.
+The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives. However, the floe circularity is, in general, a necessary but not sufficient criterion. Many false positives also have similar circularity properties as real floes. 
 
 ### References
 Buckley, E., Cañuelas, Timmermans, M.-L., and Wilhelmus, M. M. (2023), "Seasonal Evolution of the Sea Ice Floe Size Distribution from Two Decades of MODIS Data," EGUsphere (preprint), https://doi.org/10.5194/egusphere-2024-89

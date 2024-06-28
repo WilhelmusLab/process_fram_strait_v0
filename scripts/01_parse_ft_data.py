@@ -125,9 +125,11 @@ def parser_ift(year, dataloc, ref_image_loc):
 
     else:
         if year == 2020:
-            # The images from 2020 reference a different image and
-            # are stretched in the y direction. This applies a linear correction.
-            # We first shift from pixels to stereographic
+            # The images from 2020 reference 
+            # a different image and are stretched
+            # in the y direction. This applies a 
+            # linear correction.
+            
             info_region_pixel_scale_x = 200.36
             info_region_pixel_scale_y = 216.605
             x_cropped = 2.0070e5
@@ -168,7 +170,7 @@ def parser_ift(year, dataloc, ref_image_loc):
                     ~df_by_date[date].index.duplicated(
                         keep='first')].copy()
             
-    matched_props = {}
+    # matched_props = {}
     all_props = {}
     for idx, date in enumerate(info_df['datetime']):
         if date in df_by_date:
@@ -198,15 +200,15 @@ def parser_ift(year, dataloc, ref_image_loc):
                     
                     p_df.loc[px_idx, 'floe_id'] = floe_id
             all_props[idx] = p_df.copy()
-            matched_props[idx] = p_df.where(p_df.floe_id != 'unmatched').dropna().loc[:,
-                    ['floe_id', 'datetime', 'area',
-                     'perimeter', 'major_axis', 'minor_axis',
-                     'orientation', 'convex_area', 'solidity']]
+            # matched_props[idx] = p_df.where(p_df.floe_id != 'unmatched').dropna().loc[:,
+            #         ['floe_id', 'datetime', 'area',
+            #          'perimeter', 'major_axis', 'minor_axis',
+            #          'orientation', 'convex_area', 'solidity']]
 
     
     # Finally, link the matched properties and the trajectories
     # and sort by floe_id and by datetime
-    df_props = pd.concat(matched_props).reset_index(drop=True)
+    # df_props = pd.concat(matched_props).reset_index(drop=True)
 
     # Add correct position data to all_props matrix
     df_all_props = pd.concat(all_props).reset_index(drop=True)
@@ -214,28 +216,9 @@ def parser_ift(year, dataloc, ref_image_loc):
     # Add step to rename the original index
     
     if year == 2020:
-        # The images from 2020 reference a different image and
-        # are stretched in the y direction. This applies a linear correction.
-        # We first shift from pixels to stereographic
-        info_region_pixel_scale_x = 200.36
-        info_region_pixel_scale_y = 216.605  # original was 208
-        
-        left=200704
-        bottom=-2009088.0
-        # bottom = -1944710 # One option would be if the top of the black section is the right reference point, rather than the bottom
-        right=1093632.0
-        top=-317440.0
-        x_origin = 2.0080e+05
-        y_origin = -3.1754e+05
-        
-        df_all_props['x_stere'] = left + df_all_props['x_pixel'] * info_region_pixel_scale_x
-        df_all_props['y_stere'] = top - df_all_props['y_pixel'] * info_region_pixel_scale_y
-    
-        # Then we stretch the image vertically
-        # adjustment = 63.8e3
-        # A = ((top - bottom) + adjustment)/(top - bottom)
-        # B = top * (1 - A)
-        # df_all_props['y_stere'] = A*df_all_props['y_stere'] + B
+        # Manually get pixel-stereographic conversion since reference image was different
+        df_all_props['x_stere'] = x_cropped + df['x_pixel'] * info_region_pixel_scale_x
+        df_all_props['y_stere'] = y_cropped - df['y_pixel'] * info_region_pixel_scale_y   
         
     else:
         x_stere, y_stere = ref_raster.xy(row=df_all_props['y_pixel'], col=df_all_props['x_pixel'])
@@ -245,67 +228,33 @@ def parser_ift(year, dataloc, ref_image_loc):
     lon, lat = ps2ll.transform(df_all_props['x_stere'], df_all_props['y_stere'])
     df_all_props['longitude'] = np.round(lon, 5)
     df_all_props['latitude'] = np.round(lat, 5)
-    
-    
-    df_merged = df.merge(df_props, left_on=['floe_id', 'datetime'], right_on=['floe_id', 'datetime'])
-    df_merged.sort_values(['floe_id', 'datetime']).reset_index(drop=True)
-    return df_merged, df_all_props
 
-def interp_sic(position_data, sic_data):
-    """Uses the xarray advanced interpolation to get along-track sic
-    via nearest neighbors. Nearest neighbors is preferred because numerical
-    flags are used for coasts and open ocean, so interpolation is less meaningful."""
-    # Sea ice concentration uses NSIDC NP Stereographic
-    crs0 = pyproj.CRS('WGS84')
-    crs1 = pyproj.CRS('+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +k=1 +x_0=0 +y_0=0 +a=6378273 +b=6356889.449 +units=m +no_defs')
-    transformer_stere = pyproj.Transformer.from_crs(crs0, crs_to=crs1, always_xy=True)
-    
-    sic = pd.Series(data=np.nan, index=position_data.index)
-    
-    for date, group in position_data.groupby(position_data.datetime.dt.date):
-        x_stere, y_stere = transformer_stere.transform(
-            group.longitude, group.latitude)
-        
-        x = xr.DataArray(x_stere, dims="z")
-        y = xr.DataArray(y_stere, dims="z")
-        SIC = sic_data.sel(time=date.strftime('%Y-%m-%d'))['sea_ice_concentration'].interp(
-            {'x': x,
-             'y': y}, method='nearest').data
+    return df_all_props   
+    # df_merged = df.merge(df_props, left_on=['floe_id', 'datetime'], right_on=['floe_id', 'datetime'])
+    # df_merged.sort_values(['floe_id', 'datetime']).reset_index(drop=True)
+    # return df_merged, df_all_props
 
-        sic.loc[group.index] = np.round(SIC.T, 3)
-    return sic
+
 
 
 for year in range(2003, 2021):
     year_folder = 'fram_strait-{y}'.format(y=year)
     
     print(year)
-    df, props = parser_ift(year=year,
+    # df, props = parser_ift(year=year,
+    props = parser_ift(year=year,    
             dataloc=dataloc,
             ref_image_loc=ref_image_loc)
     
-    n_missing = len(df.loc[df.x_pixel.isnull()])
+    # n_missing = len(df.loc[df.x_pixel.isnull()])
+    n_missing = len(props.loc[props.x_pixel.isnull()])
     if n_missing > 0:
         print('Warning: Missing position data for', n_missing, 'floes')
 
-    # Add sea ice concentration column
-    with xr.open_dataset(sic_loc + '/aggregate/seaice_conc_daily_nh_' + \
-                     str(year) + '_v04r00.nc') as sic_data:
-        ds = xr.Dataset({'sea_ice_concentration':
-                         (('time', 'y', 'x'), sic_data['cdr_seaice_conc'].data)},
-                           coords={'time': (('time', ), sic_data['time'].data),
-                                   'x': (('x', ), sic_data['xgrid'].data), 
-                                   'y': (('y', ), sic_data['ygrid'].data)})
-    
-        sic = interp_sic(df, ds)
-        df['nsidc_sic'] = np.round(sic, 2)
-
-        sic = interp_sic(props, ds)
-        props['nsidc_sic'] = np.round(sic, 2)
     ## Save locally
-    df.to_csv(saveloc + 'tracked_floes/ift_tracked_floes_{y}.csv'.format(y=year))
+    # df.to_csv(saveloc + 'tracked_floes/ift_tracked_floes_{y}.csv'.format(y=year))
     props.to_csv(saveloc + 'all_floes/ift_floe_properties_{y}.csv'.format(y=year))
 
-    ## Save to archive
-    df.to_csv(saveloc_archive + year_folder + '/ift_all_tracked_floes_{y}.csv'.format(y=year))
-    props.to_csv(saveloc_archive + year_folder + '/ift_all_floe_properties_{y}.csv'.format(y=year))
+    # ## Save to archive
+    # df.to_csv(saveloc_archive + year_folder + '/ift_all_tracked_floes_{y}.csv'.format(y=year))
+    # props.to_csv(saveloc_archive + year_folder + '/ift_all_floe_properties_{y}.csv'.format(y=year))
