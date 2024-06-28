@@ -81,6 +81,8 @@ for year in ift_dfs:
         if month != 3: # Only 1 day in March in any year, so we skip it. Only use full months.
             data_samples.append(group.loc[group.classification != 'NA'].groupby('classification').apply(lambda x: x.sample(min(len(x), 1000), replace=False)))
 
+data = pd.concat(data_samples).reset_index(drop=True)
+
 #### Train logistic regression model
 minimal_variables = ['circularity', 'tc_channel0', 'fc_channel0']
 # This are the variables that are not closely correlated with each other. Functions of other brightness channels could be useful.
