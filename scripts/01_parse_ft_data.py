@@ -14,6 +14,7 @@ The 2020 images were stretched in the vertical, so a separate conversion step is
 
 Extracted tables are saved in data/all_floes and data/tracked_floes respectively.
 """
+
 import numpy as np
 import os
 import pandas as pd
@@ -169,8 +170,7 @@ def parser_ift(year, dataloc, ref_image_loc):
             df_by_date[date] = df_by_date[date].loc[
                     ~df_by_date[date].index.duplicated(
                         keep='first')].copy()
-            
-    # matched_props = {}
+        
     all_props = {}
     for idx, date in enumerate(info_df['datetime']):
         if date in df_by_date:
@@ -199,7 +199,9 @@ def parser_ift(year, dataloc, ref_image_loc):
                         print('Larger than threshold')
                     
                     p_df.loc[px_idx, 'floe_id'] = floe_id
-            all_props[idx] = p_df.copy()
+
+            all_props[idx] = p_df.merge(df_by_date[date][['theta_aqua', 'theta_terra']].reset_index(),
+                                        left_on='floe_id', right_on='floe_id')
             # matched_props[idx] = p_df.where(p_df.floe_id != 'unmatched').dropna().loc[:,
             #         ['floe_id', 'datetime', 'area',
             #          'perimeter', 'major_axis', 'minor_axis',
@@ -214,9 +216,8 @@ def parser_ift(year, dataloc, ref_image_loc):
     df_all_props = pd.concat(all_props).reset_index(drop=True)
     
     # Add step to rename the original index
-    
     if year == 2020:
-        # Manually get pixel-stereographic conversion since reference image was different
+        # Manually perform pixel-to-stereographic conversion since reference image was different
         df_all_props['x_stere'] = x_cropped + df['x_pixel'] * info_region_pixel_scale_x
         df_all_props['y_stere'] = y_cropped - df['y_pixel'] * info_region_pixel_scale_y   
         
@@ -230,12 +231,6 @@ def parser_ift(year, dataloc, ref_image_loc):
     df_all_props['latitude'] = np.round(lat, 5)
 
     return df_all_props   
-    # df_merged = df.merge(df_props, left_on=['floe_id', 'datetime'], right_on=['floe_id', 'datetime'])
-    # df_merged.sort_values(['floe_id', 'datetime']).reset_index(drop=True)
-    # return df_merged, df_all_props
-
-
-
 
 for year in range(2003, 2021):
     year_folder = 'fram_strait-{y}'.format(y=year)
@@ -251,10 +246,6 @@ for year in range(2003, 2021):
     if n_missing > 0:
         print('Warning: Missing position data for', n_missing, 'floes')
 
-    ## Save locally
+    ## Save locally -- data will get added to this down the line.
     # df.to_csv(saveloc + 'tracked_floes/ift_tracked_floes_{y}.csv'.format(y=year))
     props.to_csv(saveloc + 'all_floes/ift_floe_properties_{y}.csv'.format(y=year))
-
-    # ## Save to archive
-    # df.to_csv(saveloc_archive + year_folder + '/ift_all_tracked_floes_{y}.csv'.format(y=year))
-    # props.to_csv(saveloc_archive + year_folder + '/ift_all_floe_properties_{y}.csv'.format(y=year))
