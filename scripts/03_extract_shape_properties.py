@@ -68,7 +68,7 @@ def interp_sic(position_data, sic_data):
         sic.loc[group.index] = np.round(SIC.T, 3)
     return sic
     
-for year in range(2005, 2021): # rerun 2004
+for year in range(2004, 2005): # rerun 2004
     #### Load ift data
     ift_df = pd.read_csv(props_loc + 'ift_floe_properties_{y}.csv'.format(y=year), index_col=0)
     ift_df['datetime'] = pd.to_datetime(ift_df.datetime.values)
@@ -111,31 +111,42 @@ for year in range(2005, 2021): # rerun 2004
                                '.'.join([date.strftime('%Y%m%d'),
                                          group.satellite.values[0],
                                          'falsecolor', '250m', 'tiff']))
+    
         with rio.open(lb_path) as im:
             lb_im = reshape_as_image(im.read())
-        with rio.open(tc_path) as im:
-            tc_im = reshape_as_image(im.read())
-        with rio.open(fc_path) as im:
-            fc_im = reshape_as_image(im.read())
+        try:
+            with rio.open(tc_path) as im:
+                tc_im = reshape_as_image(im.read())
+            with rio.open(fc_path) as im:
+                fc_im = reshape_as_image(im.read())
             
-        props_tc = pd.DataFrame(regionprops_table(lb_im[:, :, 0], tc_im,
-                                                  properties=['label', 
-                                                              'intensity_mean'] + properties))
-        props_fc = pd.DataFrame(regionprops_table(lb_im[:, :, 0], fc_im,
-                                                  properties=['label',
-                                                              'intensity_mean']))
-        props_tc.rename({'intensity_mean-0': 'tc_channel0',
-                         'intensity_mean-1': 'tc_channel1',
-                         'intensity_mean-2': 'tc_channel2'}, axis=1, inplace=True)
-        props_fc.rename({'intensity_mean-0': 'fc_channel0',
-                         'intensity_mean-1': 'fc_channel1',
-                         'intensity_mean-2': 'fc_channel2'}, axis=1, inplace=True)
-        
-        props = props_tc.merge(props_fc, left_on='label', right_on='label')
+            props_tc = pd.DataFrame(regionprops_table(lb_im[:, :, 0], tc_im,
+                                                      properties=['label', 
+                                                                  'intensity_mean'] + properties))
+            props_fc = pd.DataFrame(regionprops_table(lb_im[:, :, 0], fc_im,
+                                                      properties=['label',
+                                                                  'intensity_mean']))
+            props_tc.rename({'intensity_mean-0': 'tc_channel0',
+                             'intensity_mean-1': 'tc_channel1',
+                             'intensity_mean-2': 'tc_channel2'}, axis=1, inplace=True)
+            props_fc.rename({'intensity_mean-0': 'fc_channel0',
+                             'intensity_mean-1': 'fc_channel1',
+                             'intensity_mean-2': 'fc_channel2'}, axis=1, inplace=True)
+            
+            props = props_tc.merge(props_fc, left_on='label', right_on='label')
+            
+            # del lb_im, tc_im, fc_im, props_tc, props_fc, props
+        except:
+            print('Image read failed for date', date)
+            props = pd.DataFrame(regionprops_table(lb_im[:, :, 0], 
+                                                      properties=['label'] + properties))
+            for missing_column in ['tc_channel0', 'tc_channel1', 'tc_channel2',
+                                   'fc_channel0', 'fc_channel1', 'fc_channel2']:
+                props[missing_column] = np.nan
+            
         props['circularity'] = 4*np.pi*props['area']/props['perimeter']**2
         dfs_with_pixel_data.append(group.merge(props, left_on='orig_idx', right_on='label'))
-    
-        del lb_im, tc_im, fc_im, props_tc, props_fc, props
+        
 
     data = pd.concat(dfs_with_pixel_data).reset_index(drop=True)
 
@@ -164,5 +175,3 @@ for year in range(2005, 2021): # rerun 2004
     data.loc[:, order].to_csv(
         '../data/all_floes/ift_floe_properties_with_pixel_brightness_{y}.csv'.format(y=year))
 
-    year_folder = 'fram_strait-{y}'.format(y=year)
-    data.to_csv(image_loc + year_folder + '/ift_raw_floe_properties_{y}.csv'.format(y=year))
