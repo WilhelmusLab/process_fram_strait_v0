@@ -34,8 +34,11 @@ for year in range(2003, 2021):
     
     
 # load the labeled image
+    
 # load the properties table
+    
 # set shapes marked as false to 0
+    
 # save image
         month_folder = get_month_folder(info_df.loc[date_idx, 'SOIT time'])
         

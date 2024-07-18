@@ -22,8 +22,8 @@ warnings.simplefilter('ignore')
 # Satellite image data is stored on the shared drive
 image_loc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
 
-# Property tables are in this repo
-props_loc = '../data/all_floes/'
+# Property tables are saved in a temp file
+props_loc = '../data/temp/floe_properties/'
 
 # Sea ice concentration stored locally
 sic_loc = '/Users/dwatkin2/Documents/research/data/nsidc_daily_cdr/'

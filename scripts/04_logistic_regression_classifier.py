@@ -47,7 +47,7 @@ def estimated_mean_speed(floe_df):
     return np.round((np.sqrt(delta_x**2 + delta_y**2)).sum()/dt, 3)
 
 #### Load the dataframes with pixel brightness
-pb_dataloc = '../data/all_floes/'
+pb_dataloc = '../data/temp/floe_properties_brightness/'
 
 ift_dfs = {}
 for year in range(2003, 2021): # re-do to have all years once 03 finishes running

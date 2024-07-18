@@ -24,7 +24,11 @@ import xarray as xr
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
-saveloc = '../data/'
+saveloc = '../data/temp/'
+
+# Make the temporary save folder
+os.makedirs(saveloc, exist_ok=True)
+
 saveloc_archive = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
 dataloc = '../data/matlab_output/' 
 ref_image_loc = '../data/NE_Greenland.2017100.terra.250m.tif'

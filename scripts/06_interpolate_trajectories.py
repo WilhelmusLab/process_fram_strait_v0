@@ -24,18 +24,13 @@ import warnings
 # Note: Behavior of idxmin in the presence of nans will change in next version
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-saveloc = '../data/floe_tracker/interpolated/'
-saveloc_single = '../data/floe_tracker/'
-
+# Reads the "clean" property tables from here and saves the interpolated trajectories to here
 dataloc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
 
 interp_variables = ['longitude', 'latitude', 'x_stere', 'y_stere',
                     'area', 'perimeter', 'axis_major_length', 'axis_minor_length',
                     'solidity', 'circularity', 'nsidc_sic', 'lr_probability']
 
-# Location of folder with ERA5 data. I saved the ERA5 data with 
-# a file structure of era5_dataloc/YYYY/era5_uvmsl_daily_mean_YYYY-MM-01.nc
-# era5_dataloc = '../external_data/era5_daily/'
 def regrid_floe_tracker(group, datetime_grid, variables=['x_stere', 'y_stere']):
     """Estimate the location at 12 UTC using linear interpolation.
     Group should have datetime index. """

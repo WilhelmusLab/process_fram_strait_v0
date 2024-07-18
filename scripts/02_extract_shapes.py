@@ -50,7 +50,7 @@ for year in range(2003, 2021):
     for date_idx in info_df.index:
         all_props.loc[all_props.datetime == info_df.loc[date_idx, 'SOIT time'], 'date_idx'] = date_idx
     
-    # TBD: test adjustments for the 2020 differences in coordinates
+    
     for date_idx in info_df.index:
         # Grab the subset matching the date
         df = all_props.loc[all_props.date_idx == date_idx] 
