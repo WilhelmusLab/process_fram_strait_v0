@@ -1,5 +1,4 @@
 """Convert the FLOE_LIBRARY matlab files into GeoTiffs matching the shape of the reference image.
-Tested for 2019. Need to examine reasons for 2020 not working right.
 """
 import numpy as np
 import os
@@ -62,15 +61,15 @@ for year in range(2003, 2021):
         segmented_image = np.zeros((nlayers, nrows, ncols))
         for row, data in df.iterrows():
             ri, ci = im_ref.index(data.x_stere, data.y_stere)
-            floe_image = floelib['FLOE_LIBRARY'][data.orig_idx - 1, date_idx]
-
+            orig_idx = int(data.orig_idx - 1)
+            floe_image = floelib['FLOE_LIBRARY'][orig_idx, date_idx]
             
             if year == 2020:
-                # Resize image to have correct pixel size
-                info_region_pixel_scale_x = 200.36
-                info_region_pixel_scale_y = 216.605
-                new_size = (int(floe_image.shape[0]*info_region_pixel_scale_x / 256), 
-                            int(floe_image.shape[1]*info_region_pixel_scale_y / 256))
+                # Resize floe image to have correct pixel size
+                info_region_pixel_scale_x = 200.298
+                info_region_pixel_scale_y = 216.600
+                new_size = (int(floe_image.shape[0]*info_region_pixel_scale_y / 256), 
+                            int(floe_image.shape[1]*info_region_pixel_scale_x / 256))
 
                 # Define zero padding
                 dx = (floe_image.shape[0] - new_size[0])/2
@@ -109,7 +108,8 @@ for year in range(2003, 2021):
             # Coordinates of bottom corner found w/ height and width
             right_x = int(left_x + data.bbox3 + 1)
             bottom_y = int(top_y - data.bbox4 - 1)
-            
+
+            # Use the original index as the floe label
             if (ri > 0) & (ci > 0):
                 if segmented_image[0, bottom_y:top_y, left_x:right_x].shape == floe_image.shape:
                     segmented_image[0, bottom_y:top_y, left_x:right_x] += floe_image * data.orig_idx

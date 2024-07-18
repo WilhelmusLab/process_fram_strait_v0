@@ -68,8 +68,8 @@ def interp_sic(position_data, sic_data):
         sic.loc[group.index] = np.round(SIC.T, 3)
     return sic
     
-for year in range(2004, 2005): # rerun 2004
-    #### Load ift data
+for year in range(2003, 2021): 
+    #### Load IFT data
     ift_df = pd.read_csv(props_loc + 'ift_floe_properties_{y}.csv'.format(y=year), index_col=0)
     ift_df['datetime'] = pd.to_datetime(ift_df.datetime.values)
 
@@ -167,7 +167,7 @@ for year in range(2004, 2005): # rerun 2004
              'circularity', 'axis_major_length', 'axis_minor_length',
              'bbox_min_row', 'bbox_min_col', 'bbox_max_row', 'bbox_max_col',
              'area_matlab', 'perimeter_matlab', 'solidity_matlab', 'orientation_matlab',
-             'nsidc_sic',
+             'nsidc_sic', 'theta_aqua', 'theta_terra',
              'tc_channel0', 'tc_channel1', 'tc_channel2',
              'fc_channel0', 'fc_channel1', 'fc_channel2']    
     data.rename(rename, axis=1, inplace=True)

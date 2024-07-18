@@ -131,12 +131,12 @@ def parser_ift(year, dataloc, ref_image_loc):
             # in the y direction. This applies a 
             # linear correction.
             
-            info_region_pixel_scale_x = 200.36
-            info_region_pixel_scale_y = 216.605
-            x_cropped = 2.0070e5
-            y_cropped = -3.1744e5
-            df['x_stere'] = x_cropped + df['x_pixel'] * info_region_pixel_scale_x
-            df['y_stere'] = y_cropped - df['y_pixel'] * info_region_pixel_scale_y
+            info_region_pixel_scale_x = 200.298
+            info_region_pixel_scale_y = 216.600
+            left = 2.0070e5
+            top = -3.1744e5
+            df['x_stere'] = left + df['x_pixel'] * info_region_pixel_scale_x
+            df['y_stere'] = top - df['y_pixel'] * info_region_pixel_scale_y
         
             # Then we stretch the image vertically
             # left=200704
@@ -180,7 +180,7 @@ def parser_ift(year, dataloc, ref_image_loc):
                          'bbox1', 'bbox2', 'bbox3','bbox4'])
             p_df['orig_idx'] = p_df.index + 1 # Keeping index in matlab convention, so that floe labels in images are nonzero
             p_df['satellite'] = df_by_date[date].satellite.values[0] 
-            p_df['floe_id'] = 'unmatched'
+            p_df['floe_id'] = 'unmatched' # Idea: also give label here? ['unmatched_' + str(idx).zfill(4) for idx in range(p_df.shape[0])]
             p_df['datetime'] = date
             floe_id_list = df_by_date[date].index
             for floe_id in floe_id_list:            
@@ -201,13 +201,8 @@ def parser_ift(year, dataloc, ref_image_loc):
                     p_df.loc[px_idx, 'floe_id'] = floe_id
 
             all_props[idx] = p_df.merge(df_by_date[date][['theta_aqua', 'theta_terra']].reset_index(),
-                                        left_on='floe_id', right_on='floe_id')
-            # matched_props[idx] = p_df.where(p_df.floe_id != 'unmatched').dropna().loc[:,
-            #         ['floe_id', 'datetime', 'area',
-            #          'perimeter', 'major_axis', 'minor_axis',
-            #          'orientation', 'convex_area', 'solidity']]
+                                        left_on='floe_id', right_on='floe_id', how='outer')
 
-    
     # Finally, link the matched properties and the trajectories
     # and sort by floe_id and by datetime
     # df_props = pd.concat(matched_props).reset_index(drop=True)
@@ -218,8 +213,8 @@ def parser_ift(year, dataloc, ref_image_loc):
     # Add step to rename the original index
     if year == 2020:
         # Manually perform pixel-to-stereographic conversion since reference image was different
-        df_all_props['x_stere'] = x_cropped + df['x_pixel'] * info_region_pixel_scale_x
-        df_all_props['y_stere'] = y_cropped - df['y_pixel'] * info_region_pixel_scale_y   
+        df_all_props['x_stere'] = left + df_all_props['x_pixel'] * info_region_pixel_scale_x
+        df_all_props['y_stere'] = top - df_all_props['y_pixel'] * info_region_pixel_scale_y   
         
     else:
         x_stere, y_stere = ref_raster.xy(row=df_all_props['y_pixel'], col=df_all_props['x_pixel'])

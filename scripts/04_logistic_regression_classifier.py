@@ -86,6 +86,8 @@ for year in ift_dfs:
             data_samples.append(group.loc[group.classification != 'NA'].groupby('classification').apply(lambda x: x.sample(min(len(x), 1000), replace=False)))
 
 data = pd.concat(data_samples).reset_index(drop=True)
+print('Number of true and false positives for each month')
+print(data[['area']].groupby([data.datetime.dt.month, data.classification]).count().pivot_table(index='datetime', values='area', columns='classification'))
 
 #### Train logistic regression model
 minimal_variables = ['circularity', 'tc_channel0', 'fc_channel0']
@@ -125,10 +127,10 @@ order = ['datetime','satellite',  'floe_id', 'label',
          'circularity', 'axis_major_length', 'axis_minor_length',
          'bbox_min_row', 'bbox_min_col', 'bbox_max_row', 'bbox_max_col',
          'area_matlab', 'perimeter_matlab', 'solidity_matlab', 'orientation_matlab',
-         'nsidc_sic',
+         'nsidc_sic', 'theta_aqua', 'theta_terra',
          'tc_channel0', 'tc_channel1', 'tc_channel2',
-         'fc_channel0', 'fc_channel1', 'fc_channel2', 'init_classification',
-         'lr_probability', 'lr_classification']    
+         'fc_channel0', 'fc_channel1', 'fc_channel2',
+         'init_classification', 'lr_probability', 'lr_classification']    
 
 for year in ift_dfs:    
     idx_data = ift_dfs[year].tc_channel1.notnull() & (ift_dfs[year].circularity <= 1.2)
