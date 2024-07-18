@@ -48,19 +48,25 @@ Floe properties were initially calculated in MATLAB and are saved by the `01_par
 ## 4. Cleaning dataset using logistic regression function
 The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives. However, the floe circularity is, in general, a necessary but not sufficient criterion. Many false positives also have similar circularity properties as real floes. 
 
+TBD: Description of LR classifier fitting and performance
+
 ## 5. Filtering GeoTiff images
 This function removes floes flagged as false positives from the GeoTiff images, while retaining the original labels.
 
+TBD: Example images
+
 ## 6. Interpolate trajectories
 For analysis of velocity and rotation rate, we have to first align the data with a regular time grid. 
-TBD: method for interpolation, method for calculating the rotation rate
+TBD: Describe method for interpolation, method for calculating the rotation rate
+
+TBD: Example image
 
 # Final dataset structure
-File tree for the Digital Repository
+TBD: File tree for the Digital Repository
 
-Number of images, file types
+TBD: Number of images, file types
 
-Data structure for the floe property tables:
+TBD: Data structure for the floe property tables:
 |Column|Description|Units|
 |---|---|---|
 |area| | |
