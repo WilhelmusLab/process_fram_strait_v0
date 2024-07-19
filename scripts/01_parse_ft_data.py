@@ -232,10 +232,7 @@ def parser_ift(year, dataloc, ref_image_loc):
     return df_all_props   
 
 for year in range(2003, 2021):
-    year_folder = 'fram_strait-{y}'.format(y=year)
-    
     print(year)
-    # df, props = parser_ift(year=year,
     props = parser_ift(year=year,    
             dataloc=dataloc,
             ref_image_loc=ref_image_loc)
@@ -246,5 +243,4 @@ for year in range(2003, 2021):
         print('Warning: Missing position data for', n_missing, 'floes')
 
     ## Save locally -- data will get added to this down the line.
-    # df.to_csv(saveloc + 'tracked_floes/ift_tracked_floes_{y}.csv'.format(y=year))
-    props.to_csv(saveloc + 'all_floes/ift_floe_properties_{y}.csv'.format(y=year))
+    props.to_csv(saveloc + 'floe_properties/ift_floe_properties_{y}.csv'.format(y=year))

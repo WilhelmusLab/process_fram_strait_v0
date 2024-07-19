@@ -40,7 +40,7 @@ for year in range(2003, 2021):
     ncols = im.shape[2]
     
     floelib = loadmat('../data/matlab_output/{y}/FLOE_LIBRARY.mat'.format(y=year))
-    all_props = pd.read_csv('../data/all_floes/ift_floe_properties_{y}.csv'.format(y=year))
+    all_props = pd.read_csv('../data/temp/floe_properties/ift_floe_properties_{y}.csv'.format(y=year))
     info_df = pd.read_csv('../data/matlab_output/{y}/time_data.csv'.format(y=year), index_col=0)
     info_df['SOIT time'] = pd.to_datetime(info_df['SOIT time'])
     all_props['datetime'] = pd.to_datetime(all_props['datetime'])

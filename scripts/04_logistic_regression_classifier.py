@@ -72,10 +72,14 @@ for year in range(2003, 2021): # re-do to have all years once 03 finishes runnin
     ift_df['classification'] = 'NA'
     ift_df.loc[ift_df.nsidc_sic == 0, 'classification'] = 'FP'
     ift_df.loc[df_floes.index, 'classification'] = 'TP'
+    
     # Mark invalid data as NA. Circularity should always be less than 1 if the true area/perimeter are known, I use 1.2 as an 
     # upper limit to allow for some uncertainty in the calculation.
     ift_df.loc[ift_df.circularity > 1.2, 'classification'] = 'NA'
     ift_df.loc[ift_df.tc_channel0.isnull(), 'classification'] = 'NA'
+    
+    # 2003-2019 were run with min area 300, don't use the 2020 small floes to train the model
+    ift_df.loc[ift_df.area < 300, 'classification'] = 'NA'
     ift_dfs[year] = ift_df.copy()
 
 #### Get random sample for training/testing
@@ -145,10 +149,10 @@ for year in ift_dfs:
     # ift_dfs[year].to_csv('../data/all_floes/ift_floe_properties_LR_results_{y}.csv'.format(y=year))
     #### Round the numbers down so we aren't artificially increasing precision
     for var in ['x_stere', 'y_stere', 'area', 'perimeter',
-                'circularity', 'axis_major_length', 'axis_minor_length',
+                'axis_major_length', 'axis_minor_length',
                 'bbox_min_row', 'bbox_min_col', 'bbox_max_row', 'bbox_max_col']:
         ift_dfs[year][var] = ift_dfs[year][var].round(1)
-
+    ift_dfs[year]['circularity'] = ift_dfs[year]['circularity'].round(3) 
     ift_dfs[year]['latitude'] = ift_dfs[year]['latitude'].round(4)
     ift_dfs[year]['longitude'] = ift_dfs[year]['longitude'].round(4)
 
@@ -157,8 +161,11 @@ for year in ift_dfs:
     ift_dfs[year].rename({'classification': 'init_classification'}, axis=1, inplace=True)
     
     year_folder = 'fram_strait-{y}'.format(y=year)
+
+    
     ift_dfs[year].loc[:, order].to_csv(dataloc + year_folder + '/ift_raw_floe_properties_{y}.csv'.format(y=year))
 
     # Keep the floes tagged as true positives initially as well as any others marked as TPs by the LR model
     idx_keep = (ift_dfs[year]['init_classification'] == 'TP') | ift_dfs[year].lr_classification
+    idx_keep = idx_keep & (ift_dfs[year]['area'] >= 300)
     ift_dfs[year].loc[idx_keep, order].dropna(subset='x_stere').to_csv(dataloc + year_folder + '/ift_clean_floe_properties_{y}.csv'.format(y=year))
