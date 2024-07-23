@@ -3,6 +3,8 @@ The Ice Floe Tracker (IFT) algorithm was developed by Rosalinda Lopez-Acosta dur
 
 This dataset collects the Greenland Sea results, converted from proprietary MATLAB format into open GeoTiff and CSV format. MATLAB data and script files are included as well as Python scripts to read and format the MATLAB data.  We additionally use a logistic regression classifier to remove false positives from the dataset. The original segmentation results are saved as "labeled_raw" and the results with flagged flase positives removed is saved as "labeled_clean". Access to additional datasets, in the form of true and false color MODIS imagery and sea ice concentration data, is required, and is included in the data repository but due to size limitations not included in the GitHub repository.
 
+For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.edu`).
+
 ## Reprocessing Algorithm Results from Lopez-Acosta (2021)
 MODIS imagery from the East Greenland Sea south of Fram Strait for the years 2003-2020 was processed by Rosalinda Lopez-Acosta for her PhD dissertation "Sea Ice Drift in Arctic Marginal Ice Zones Derived from Optical Satellite imagery". The image processing and analysis was carried out using MATLAB software. This repository contains code to extract data from the MATLAB output and convert it into cross-platform readable GeoTiff and CSV files for broader public release. We also address differences in the image resolution in the initial processing for the 2020 data so that the final dataset is self-consistent.
 

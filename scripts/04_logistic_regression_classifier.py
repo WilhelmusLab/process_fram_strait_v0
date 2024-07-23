@@ -34,10 +34,12 @@ def get_month_folder(date):
     return '-'.join(['fram_strait', start, end])
 
 def pixel_path_length(floe_df):
-    """Calculates distance traversed in units of pixels"""
-    delta_r = floe_df['row_pixel'] - floe_df['row_pixel'].shift(-1)
-    delta_c = floe_df['col_pixel'] - floe_df['col_pixel'].shift(-1)
-    return (np.sqrt(delta_r**2 + delta_c**2)).sum()
+    """Calculates median distance traversed in units of pixels/day"""
+    delta_x = floe_df['col_pixel'].shift(-1) - floe_df['col_pixel']
+    delta_y = floe_df['row_pixel'].shift(-1) - floe_df['row_pixel']
+    delta_t = (floe_df['datetime'].shift(-1) - floe_df['datetime']).dt.total_seconds()
+    delta_t = delta_t / (60*60*24)
+    return ((np.sqrt(delta_x**2 + delta_y**2))/delta_t).median()
 
 def estimated_mean_speed(floe_df):
     """Calculates distance traversed in units of pixels"""
@@ -50,22 +52,27 @@ def estimated_mean_speed(floe_df):
 pb_dataloc = '../data/temp/floe_properties_brightness/'
 
 ift_dfs = {}
-for year in range(2003, 2021): # re-do to have all years once 03 finishes running
+for year in range(2003, 2021):
     ift_df = pd.read_csv(pb_dataloc + '/ift_floe_properties_with_pixel_brightness_{y}.csv'.format(y=year))
     ift_df['datetime'] = pd.to_datetime(ift_df['datetime'])
-    ift_df['circularity'] = 4*np.pi*ift_df['area']/ift_df['perimeter']**2 # calculated in the new version of the brightness extraction code
+    
+    # Drop too-small floes (really only for 2020 since the others already filtered)
+    ift_df = ift_df.loc[ift_df.area >= 300].copy() 
+
+    ift_df['circularity'] = 4*np.pi*ift_df['area']/ift_df['perimeter']**2 
+
     # Scale the pixel brightness data to 0-1
     for var in ['tc_channel0', 'tc_channel1', 'tc_channel2', 'fc_channel0', 'fc_channel1', 'fc_channel2']:
         ift_df[var] = ift_df[var]/255
     
     df_floes = ift_df.loc[ift_df.floe_id != 'unmatched']
     
-    # Require a minimum amount of travel (2 pixels per image ~ 1 pixel per day)
-    df_floes = df_floes.groupby('floe_id').filter(lambda x: pixel_path_length(x) > 2*len(x))
+    # Require a minimum amount of travel (median daily travel of 1 pixel per day)
+    df_floes = df_floes.groupby('floe_id').filter(lambda x: pixel_path_length(x) > 1)
     
-    # Average speed has to be less than 1 m/s
+    # Average speed has to be less than 1.5 m/s
     # Calculated as path length divided by total elapsed time
-    df_floes = df_floes.groupby('floe_id').filter(lambda x: estimated_mean_speed(x) < 1)
+    df_floes = df_floes.groupby('floe_id').filter(lambda x: estimated_mean_speed(x) < 1.5)
     
     # Remove SIC=0 and landmasked floes from TP dataset
     df_floes = df_floes.loc[(df_floes.nsidc_sic > 0) & (df_floes.nsidc_sic <= 1)]
@@ -73,13 +80,20 @@ for year in range(2003, 2021): # re-do to have all years once 03 finishes runnin
     ift_df.loc[ift_df.nsidc_sic == 0, 'classification'] = 'FP'
     ift_df.loc[df_floes.index, 'classification'] = 'TP'
     
-    # Mark invalid data as NA. Circularity should always be less than 1 if the true area/perimeter are known, I use 1.2 as an 
+    # Mark invalid data as NA. Circularity should always be less than 1 if the true
+    # area/perimeter are known. I use 1.2 as an 
     # upper limit to allow for some uncertainty in the calculation.
     ift_df.loc[ift_df.circularity > 1.2, 'classification'] = 'NA'
     ift_df.loc[ift_df.tc_channel0.isnull(), 'classification'] = 'NA'
-    
-    # 2003-2019 were run with min area 300, don't use the 2020 small floes to train the model
-    ift_df.loc[ift_df.area < 300, 'classification'] = 'NA'
+
+    # Mark floes with very low circularity at false positives
+    # Manually-labeled floe shapes from the calibration dataset (in prep)
+    # never have less than circularity=0.5, and in fact closer to 0.7 is defensible.
+    # This is a strict threshold. Another option would be to sample from these,
+    # preferentiably weighing it to smaller values.
+    ift_df.loc[(ift_df.circularity < 0.5) & \
+               (ift_df.floe_id == 'unmatched'), 'classification'] = 'FP'
+
     ift_dfs[year] = ift_df.copy()
 
 #### Get random sample for training/testing
@@ -87,7 +101,12 @@ data_samples = []
 for year in ift_dfs:
     for month, group in ift_dfs[year].groupby(ift_dfs[year].datetime.dt.month):
         if month != 3: # Only 1 day in March in any year, so we skip it. Only use full months.
-            data_samples.append(group.loc[group.classification != 'NA'].groupby('classification').apply(lambda x: x.sample(min(len(x), 1000), replace=False)))
+            samples = group.loc[group.classification != 'NA'].groupby(
+                    'classification').apply(lambda x: x.sample(min(len(x), 1000), replace=False))
+            if len(samples) > 0:
+                data_samples.append(samples)
+            else:
+                print('No samples for', month, year)
 
 data = pd.concat(data_samples).reset_index(drop=True)
 print('Number of true and false positives for each month')
@@ -95,6 +114,7 @@ print(data[['area']].groupby([data.datetime.dt.month, data.classification]).coun
 
 #### Train logistic regression model
 minimal_variables = ['circularity', 'tc_channel0', 'fc_channel0']
+data = data.dropna(subset=minimal_variables)
 # This are the variables that are not closely correlated with each other. Functions of other brightness channels could be useful.
 
 X = data.loc[:, minimal_variables].to_numpy()
