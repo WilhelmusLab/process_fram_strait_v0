@@ -16,8 +16,7 @@ For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.e
 
 
 ## Processing framework
-<img align="center" src="/docs/Fram Strait Data Processing Flowchart.png" width="600">
-
+![Diagram of the processing workflow](./docs/processing_flowchart.png)
 
 # Data setup
 ## Downloading MODIS imagery via IFT Pipeline
