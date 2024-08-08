@@ -13,9 +13,10 @@ In addition to the original implementation of IFT, we introduce a post-processin
 For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.edu`).
 
 ## The Ice Floe Tracker algorithm
-summer_ice_motion_remote_sensing/process_fram_strait_v0/
+
+
 ## Processing framework
-<img align="center" src="/docs/Fram Strait Data Processing Flowchart.png" width="300">
+<img align="center" src="docs/Fram Strait Data Processing Flowchart.png" width="300">
 
 
 # Data setup
