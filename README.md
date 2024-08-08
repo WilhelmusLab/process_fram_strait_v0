@@ -1,12 +1,22 @@
 # Greenland Sea Ice Floe Segmentation and Tracking Via the Ice Floe Tracker Algorithm
-The Ice Floe Tracker (IFT) algorithm was developed by Rosalinda Lopez-Acosta during her PhD work at University of California-Riverside under the guidance of Monica M. Wilhelmus. The IFT aims to process moderate resolution optical satellite imagery for the retrieval of sea ice floe shapes and dynamics. The algorithm takes a feature matching (FM) approach to sea ice tracking, extracting ice floe borders from imagery then using a boundary correlation method to identify floe displacement and rotation in subsequent images. For her thesis work (Lopez-Acosta, 2021), images from the Moderate Resolution Imaging Spectroradiometer from 2003-2020 were processed for the Beaufort Sea (Manucharyan et al., 2022) and for the Greenland Sea south of the Fram Strait. The results from the latter were used in her dissertation and have been previously presented in Watkins et al., 2023.
-
-This dataset collects the Greenland Sea results, converted from proprietary MATLAB format into open GeoTiff and CSV format. MATLAB data and script files are included as well as Python scripts to read and format the MATLAB data.  We additionally use a logistic regression classifier to remove false positives from the dataset. The original segmentation results are saved as "labeled_raw" and the results with flagged flase positives removed is saved as "labeled_clean". Access to additional datasets, in the form of true and false color MODIS imagery and sea ice concentration data, is required, and is included in the data repository but due to size limitations not included in the GitHub repository.
+The Ice Floe Tracker (IFT) algorithm automatically identifies sea ice floes in marginal ice zones from optical satellite imagery, then uses a feature-matching approach to track individual ice floe rotation and displacement. 
+The algorithm is described in Lopez-Acosta et al. (2019) and briefly summarized below.
+It was developed by Rosalinda Lopez-Acosta during her PhD work at University of California-Riverside under the guidance of Monica M. Wilhelmus (Lopez-Acosta, 2021). 
+This dataset contains IFT results for nearly 20 years of satellite imagery from the Moderate Resolution Imaging Spectroradiometer (MODIS) instrument, aboard NASA's *Aqua* and *Terra* satellites. 
+Analysis of this dataset is included in Lopez-Acosta (2021) and in Watkins et al. (2023). 
+This repository contains code to translate the original output, in proprietary MATLAB format, into cross-platform compatible GeoTiff and CSV formats. 
+MATLAB data and script files are included as well as Python scripts to read and format the MATLAB data. 
+We also address differences in the image resolution in the initial processing for the 2020 data so that the final dataset is self-consistent.
+Access to additional datasets, in the form of true and false color MODIS imagery and National Snow and Sea Ice Data Center (NSIDC) Climate Data Record of Sea Ice Concentration (Meier et al., 2021), is required to run the scripts.
+In addition to the original implementation of IFT, we introduce a post-processing routine for quality control based on a logistic regression classifier. 
 
 For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.edu`).
 
-## Reprocessing Algorithm Results from Lopez-Acosta (2021)
-MODIS imagery from the East Greenland Sea south of Fram Strait for the years 2003-2020 was processed by Rosalinda Lopez-Acosta for her PhD dissertation "Sea Ice Drift in Arctic Marginal Ice Zones Derived from Optical Satellite imagery". The image processing and analysis was carried out using MATLAB software. This repository contains code to extract data from the MATLAB output and convert it into cross-platform readable GeoTiff and CSV files for broader public release. We also address differences in the image resolution in the initial processing for the 2020 data so that the final dataset is self-consistent.
+## The Ice Floe Tracker algorithm
+summer_ice_motion_remote_sensing/process_fram_strait_v0/
+## Processing framework
+<img align="center" src="/docs/Fram Strait Data Processing Flowchart.png" width="300">
+
 
 # Data setup
 ## Downloading MODIS imagery via IFT Pipeline
@@ -99,7 +109,7 @@ TBD: Data structure for the floe property tables:
 # References
 1. Buckley, E., Cañuelas, Timmermans, M.-L., and Wilhelmus, M. M. (2023), "Seasonal Evolution of the Sea Ice Floe Size Distribution from Two Decades of MODIS Data," EGUsphere (preprint), https://doi.org/10.5194/egusphere-2024-89
 2. Lopez-Acosta, R., Schodlok, M. P., and Wilhelmus, M. M. (2019). "Ice Floe Tracker: An algorithm to automatically retrieve Lagrangian trajectories via feature matching from moderate-resolution visual imagery", Remote Sensing of Environment, 234, 111406, pp. 1-15. DOI:10.1016/j.rse.2019.111406
-3. Lopez-Acosta, R. (2021), "Sea Ice Drift in Arctic Marginal Ice Zones Derived from Optical Satellite Imagery" Doctoral dissertation, University of California Riverside. 162 pages.
+3. Lopez-Acosta, R. (2021), "Sea Ice Drift in Arctic Marginal Ice Zones Derived from Optical Satellite Imagery", Doctoral dissertation, University of California Riverside. 162 pages.
 4. Manucharyan, G., Lopez-Acosta, R., and Wilhelmus, M. M. (2022), "Spinning ice floes reveal intensification of mesoscale eddies in the western Arctic Ocean", Scientific Reports, 12, 7070, pp. 1-13
 5. Meier, W., Fetterer, F., Windnagel, A.K., and Stewart, S. (2021). "NOAA / NSIDC Climate Data Record of Passive Microwave Sea Ice Concentration, Version 4". National Snow and Ice Data Center. Accessed Aug. 17, 2023. URL: https://doi.org/10.7265/efmz-2t65
 6. Pedregosa et al. (2011), "Scikit-learn: Machine Learning in Python", Journal of Machine Learning Research, 12, pp. 2825-2830, 2011.
