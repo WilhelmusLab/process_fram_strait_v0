@@ -13,13 +13,13 @@ In addition to the original implementation of IFT, we introduce a post-processin
 For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.edu`).
 
 ## The Ice Floe Tracker algorithm
-
+![Option 1](./docs/processing_flowchart.png)
 
 
 ## Processing framework
-
-![Option 2](https://github.com/WilhelmusLab/process_fram_strait_v0/blob/main/docs/processing_flowchart.png?raw=true)
-
+<!-- 
+![Option 2](https://github.com/WilhelmusLab/process_fram_strait_v0/blob/main/docs/processing_flowchart.png)
+ -->
 # Data setup
 ## Downloading MODIS imagery via IFT Pipeline
 The MODIS dataset is large, even when subsetted to the study area, and is therefore not included in this repository. To download the data, we use the Ice Floe Tracker Pipeline. The file `scripts/00_setup_ft_table.py` generates the set of CSV files in the folder `data/modis_download_spec_files`. To download the MODIS imagery on the Oscar HPC system at Brown, after installing the Ice Floe Tracker Pipeline, modify the Cylc graph in `flow_template_hpc.j2` to read:
