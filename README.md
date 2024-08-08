@@ -15,8 +15,10 @@ For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.e
 ## The Ice Floe Tracker algorithm
 
 
+
 ## Processing framework
-![Diagram of the processing workflow](./docs/processing_flowchart.png)
+
+![Option 2](https://github.com/WilhelmusLab/process_fram_strait_v0/blob/main/docs/processing_flowchart.png?raw=true)
 
 # Data setup
 ## Downloading MODIS imagery via IFT Pipeline
