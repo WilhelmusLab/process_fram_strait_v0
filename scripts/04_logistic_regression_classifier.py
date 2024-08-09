@@ -7,6 +7,7 @@ import pandas as pd
 import pyproj
 import rasterio as rio
 from rasterio.plot import reshape_as_image
+from scipy.stats import linregress
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import train_test_split
 from skimage.measure import regionprops_table
@@ -17,6 +18,9 @@ import xarray as xr
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter('ignore')
+
+# Set the random seed
+rs = 202408
 
 # Data is stored on the shared drive
 dataloc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/'
@@ -33,13 +37,11 @@ def get_month_folder(date):
     
     return '-'.join(['fram_strait', start, end])
 
-def pixel_path_length(floe_df):
-    """Calculates median distance traversed in units of pixels/day"""
-    delta_x = floe_df['col_pixel'].shift(-1) - floe_df['col_pixel']
-    delta_y = floe_df['row_pixel'].shift(-1) - floe_df['row_pixel']
-    delta_t = (floe_df['datetime'].shift(-1) - floe_df['datetime']).dt.total_seconds()
-    delta_t = delta_t / (60*60*24)
-    return ((np.sqrt(delta_x**2 + delta_y**2))/delta_t).median()
+def net_displacement_pixels(floe_df):
+    """Calculates net pixel displacement for trajectory"""
+    delta_x = floe_df['col_pixel'].values[0] - floe_df['col_pixel'].values[-1]
+    delta_y = floe_df['row_pixel'].values[0] - floe_df['row_pixel'].values[-1]
+    return np.sqrt(delta_x**2 + delta_y**2)
 
 def estimated_mean_speed(floe_df):
     """Calculates distance traversed in units of pixels"""
@@ -48,6 +50,7 @@ def estimated_mean_speed(floe_df):
     dt = (floe_df['datetime'].max() - floe_df['datetime'].min()).total_seconds()
     return np.round((np.sqrt(delta_x**2 + delta_y**2)).sum()/dt, 3)
 
+
 #### Load the dataframes with pixel brightness
 pb_dataloc = '../data/temp/floe_properties_brightness/'
 
@@ -55,54 +58,72 @@ ift_dfs = {}
 for year in range(2003, 2021):
     ift_df = pd.read_csv(pb_dataloc + '/ift_floe_properties_with_pixel_brightness_{y}.csv'.format(y=year))
     ift_df['datetime'] = pd.to_datetime(ift_df['datetime'])
-    
+
     # Drop too-small floes (really only for 2020 since the others already filtered)
     ift_df = ift_df.loc[ift_df.area >= 300].copy() 
 
     ift_df['circularity'] = 4*np.pi*ift_df['area']/ift_df['perimeter']**2 
+    # Circularity really only goes from 0 to 1, however since there is some uncertainty
+    # in perimeter calculations for discrete data I include a tolerance for higher values.
+    ift_df = ift_df.loc[(ift_df.circularity > 0) & (ift_df.circularity < 1.2)].copy()
 
+ 
     # Scale the pixel brightness data to 0-1
     for var in ['tc_channel0', 'tc_channel1', 'tc_channel2', 'fc_channel0', 'fc_channel1', 'fc_channel2']:
         ift_df[var] = ift_df[var]/255
     
+    # Select the tracked floes
     df_floes = ift_df.loc[ift_df.floe_id != 'unmatched']
     
-    # Require a minimum amount of travel (median daily travel of 1 pixel per day)
-    df_floes = df_floes.groupby('floe_id').filter(lambda x: pixel_path_length(x) > 1)
+    # Require a minimum of at least 1 pixel total displacement
+    df_floes = df_floes.groupby('floe_id').filter(lambda x: net_displacement_pixels(x) > 1)
     
-    # Average speed has to be less than 1.5 m/s
-    # Calculated as path length divided by total elapsed time
-    df_floes = df_floes.groupby('floe_id').filter(lambda x: estimated_mean_speed(x) < 1.5)
-    
+    # Average speed has to be less than 1.5 m/s and greater than 0.01 m/s
+    df_floes = df_floes.groupby('floe_id').filter(lambda x: (estimated_mean_speed(x) < 1.5) & \
+                (estimated_mean_speed(x) > 0.01))
     # Remove SIC=0 and landmasked floes from TP dataset
     df_floes = df_floes.loc[(df_floes.nsidc_sic > 0) & (df_floes.nsidc_sic <= 1)]
-    ift_df['classification'] = 'NA'
+
+    # Default classification is "Unknown"
+    ift_df['classification'] = 'UK'
+
+    # Set objects with 0 sea ice concentration as "False positive"
     ift_df.loc[ift_df.nsidc_sic == 0, 'classification'] = 'FP'
-    ift_df.loc[df_floes.index, 'classification'] = 'TP'
+
+    # Set objects with unphysically low circularity and solidity as "False positive"
+    ift_df.loc[((ift_df['circularity']   < 0.2) | (ift_df['solidity'] < 0.4)), 'classification'] = 'FP'
     
-    # Mark invalid data as NA. Circularity should always be less than 1 if the true
-    # area/perimeter are known. I use 1.2 as an 
-    # upper limit to allow for some uncertainty in the calculation.
-    ift_df.loc[ift_df.circularity > 1.2, 'classification'] = 'NA'
-    ift_df.loc[ift_df.tc_channel0.isnull(), 'classification'] = 'NA'
-
-    # Mark floes with very low circularity at false positives
-    # Manually-labeled floe shapes from the calibration dataset (in prep)
-    # never have less than circularity=0.5, and in fact closer to 0.7 is defensible.
-    # This is a strict threshold. Another option would be to sample from these,
-    # preferentiably weighing it to smaller values.
-    ift_df.loc[(ift_df.circularity < 0.5) & \
-               (ift_df.floe_id == 'unmatched'), 'classification'] = 'FP'
-
+    # Finally, the tracked floes that passed the two filters are labeled "True positive"
+    ift_df.loc[df_floes.index, 'classification'] = 'TP'    
     ift_dfs[year] = ift_df.copy()
+
+#### Use the true positives and the sea ice concentration to identify further false positives
+ift_all = pd.concat([ift_dfs[year] for year in ift_dfs])
+all_tp_data = ift_all.loc[ift_all.classification == 'TP', :].copy()
+all_tp_data['sic'] = np.round(all_tp_data.nsidc_sic, 1)
+result = all_tp_data.loc[:, ['sic', 'area']].groupby('sic').quantile([0.99])
+result.index.names = ['sic', 'quantile']
+result = result.pivot_table(index='sic', columns='quantile', values='area')
+
+# Define a threshold function based on the 99th percentile of length scale for tracked floes
+params = linregress(result[0.99].index, np.sqrt(result[0.99].values)*0.25)
+threshold = lambda x: params.slope * x + params.intercept
+
+for year in ift_dfs:
+    # length scale in kilometers
+    L = np.sqrt(ift_dfs[year]['area'])*0.25
+    sic = ift_dfs[year]['nsidc_sic']
+    excess = L > threshold(sic)
+    classification = ift_dfs[year]['classification']
+    ift_dfs[year].loc[(((sic > 0.15) & (sic < 0.85)) & excess) & (classification != 'TP'), 'classification'] = 'FP'
 
 #### Get random sample for training/testing
 data_samples = []
 for year in ift_dfs:
     for month, group in ift_dfs[year].groupby(ift_dfs[year].datetime.dt.month):
         if month != 3: # Only 1 day in March in any year, so we skip it. Only use full months.
-            samples = group.loc[group.classification != 'NA'].groupby(
-                    'classification').apply(lambda x: x.sample(min(len(x), 1000), replace=False))
+            samples = group.loc[group.classification != 'UK'].groupby(
+                    'classification').apply(lambda x: x.sample(min(len(x), 1000), replace=False, random_state=rs))
             if len(samples) > 0:
                 data_samples.append(samples)
             else:
@@ -132,7 +153,7 @@ lr_model = LogisticRegressionCV(Cs=10,
                      scoring='accuracy',
                      penalty='l2',
                      cv=10,
-                     random_state=5).fit(X_train, y_train)
+                     random_state=rs).fit(X_train, y_train)
 
 #### Compute and print skill scores for the model
 y_pred = lr_model.predict(X_test)
@@ -187,5 +208,4 @@ for year in ift_dfs:
 
     # Keep the floes tagged as true positives initially as well as any others marked as TPs by the LR model
     idx_keep = (ift_dfs[year]['init_classification'] == 'TP') | ift_dfs[year].lr_classification
-    idx_keep = idx_keep & (ift_dfs[year]['area'] >= 300)
     ift_dfs[year].loc[idx_keep, order].dropna(subset='x_stere').to_csv(dataloc + year_folder + '/ift_clean_floe_properties_{y}.csv'.format(y=year))

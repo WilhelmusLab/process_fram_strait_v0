@@ -13,13 +13,9 @@ In addition to the original implementation of IFT, we introduce a post-processin
 For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.edu`).
 
 ## The Ice Floe Tracker algorithm
-![Option 1](./docs/processing_flowchart.png)
+The IFT 
 
 
-## Processing framework
-<!-- 
-![Option 2](https://github.com/WilhelmusLab/process_fram_strait_v0/blob/main/docs/processing_flowchart.png)
- -->
 # Data setup
 ## Downloading MODIS imagery via IFT Pipeline
 The MODIS dataset is large, even when subsetted to the study area, and is therefore not included in this repository. To download the data, we use the Ice Floe Tracker Pipeline. The file `scripts/00_setup_ft_table.py` generates the set of CSV files in the folder `data/modis_download_spec_files`. To download the MODIS imagery on the Oscar HPC system at Brown, after installing the Ice Floe Tracker Pipeline, modify the Cylc graph in `flow_template_hpc.j2` to read:
@@ -46,9 +42,11 @@ cylc tui fram_strait_images
 ```
 
 ## Sea ice concentration
-We use the sea ice concentration Climate Data Record 
+We use the sea ice concentration Climate Data Record (Meier et al., 2021).
 
-# Processing
+# Processing framework
+![Flowchart describing processing pathway. Blue arrows are inputs, red arrows are outputs. Light purple blocks indicate temporary files, and dark purple blocks are archived files.](./docs/processing_flowchart.png)
+
 ## 1. Extracting floe property tables
 The MATLAB code produces files with floe properties and floe positions for (a) all candidate floe segments and (b) for all floes that were matched to a subsequent image. The file `01_parse_ft_data.py` extracts the floe properties and positions from the MATLAB output. Along with the values originally in the props.mat file, it adds a `floe_label` so that tracked floes can be assembled into trajectories. The files `time_data.csv` were manually created using a variety of sources including saved diagnostic images and output from the SOIT python function. It maps the index in the FLOE_LIBRARY and props.mat to time stamps and specific satellites. 
 
