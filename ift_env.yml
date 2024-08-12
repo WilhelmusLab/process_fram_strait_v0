@@ -11,4 +11,5 @@ dependencies:
   - scipy
   - scikit-learn
   - scikit-image
+  - xarray
 prefix: /opt/miniconda3/envs/ift_env
