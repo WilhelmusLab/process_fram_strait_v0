@@ -5,6 +5,7 @@ channels:
 dependencies:
   - numpy
   - pandas
+  - pyproj
   - python=3.9.13
   - rasterio
   - scipy
