@@ -90,6 +90,9 @@ for year in range(2003, 2021):
     # Set objects with 0 sea ice concentration as "False positive"
     ift_df.loc[ift_df.nsidc_sic == 0, 'classification'] = 'FP'
 
+    # Set objects that are on land as "False positive"
+    ift_df.loc[ift_df.nsidc_sic == 2.54, 'classification'] = 'FP'
+
     # Set objects with unphysically low circularity and solidity as "False positive"
     ift_df.loc[((ift_df['circularity']   < 0.2) | (ift_df['solidity'] < 0.4)), 'classification'] = 'FP'
     
@@ -175,19 +178,25 @@ order = ['datetime','satellite',  'floe_id', 'label',
          'nsidc_sic', 'theta_aqua', 'theta_terra',
          'tc_channel0', 'tc_channel1', 'tc_channel2',
          'fc_channel0', 'fc_channel1', 'fc_channel2',
-         'init_classification', 'lr_probability', 'lr_classification']    
+         'init_classification', 'lr_probability', 'lr_classification', 'final_classification']    
 
 for year in ift_dfs:    
     idx_data = ift_dfs[year].tc_channel1.notnull() & (ift_dfs[year].circularity <= 1.2)
     probs = lr_model.predict_proba(ift_dfs[year].loc[idx_data, minimal_variables].to_numpy())
     p_notfloe, p_floe = probs[:,0], probs[:, 1]
+    
+    # Default to probability 0 and classification False so that the classification doesn't have mixed types
+    # There are a handful of objects from 2004 where the pixel brightness values come out as NaN (269 out of approx 60,000 objects)
+    ift_dfs[year]['lr_probability'] = 0
+    ift_dfs[year]['lr_classification'] = False
+    ift_dfs[year]['final_classification'] = False
+    
     ift_dfs[year].loc[idx_data, 'lr_probability'] = np.round(p_floe, 3)
     ift_dfs[year].loc[idx_data, 'lr_classification'] = lr_model.predict(ift_dfs[year].loc[idx_data, minimal_variables].to_numpy())
     
     for var in ['tc_channel0', 'tc_channel1', 'tc_channel2', 'fc_channel0', 'fc_channel1', 'fc_channel2']:
         ift_dfs[year][var] = np.round(ift_dfs[year][var]*255, 1) # Re-scale to original brightness values
-        
-    # ift_dfs[year].to_csv('../data/all_floes/ift_floe_properties_LR_results_{y}.csv'.format(y=year))
+
     #### Round the numbers down so we aren't artificially increasing precision
     for var in ['x_stere', 'y_stere', 'area', 'perimeter',
                 'axis_major_length', 'axis_minor_length',
@@ -202,10 +211,10 @@ for year in ift_dfs:
     ift_dfs[year].rename({'classification': 'init_classification'}, axis=1, inplace=True)
     
     year_folder = 'fram_strait-{y}'.format(y=year)
+    idx_keep = (ift_dfs[year]['init_classification'] == 'TP') | (ift_dfs[year].lr_classification & (ift_dfs[year]['init_classification'] != 'FP'))
+    ift_dfs[year].loc[idx_keep, 'final_classification'] = True
+    ift_dfs[year].loc[:, order].to_csv('../data/temp/floe_properties_classified/ift_raw_floe_properties_{y}.csv'.format(y=year))
 
-    
-    ift_dfs[year].loc[:, order].to_csv(dataloc + year_folder + '/ift_raw_floe_properties_{y}.csv'.format(y=year))
-
-    # Keep the floes tagged as true positives initially as well as any others marked as TPs by the LR model
-    idx_keep = (ift_dfs[year]['init_classification'] == 'TP') | ift_dfs[year].lr_classification
-    ift_dfs[year].loc[idx_keep, order].dropna(subset='x_stere').to_csv(dataloc + year_folder + '/ift_clean_floe_properties_{y}.csv'.format(y=year))
+    # Uncomment these lines to save to archive
+    # ift_dfs[year].loc[:, order].to_csv(dataloc + year_folder + '/ift_raw_floe_properties_{y}.csv'.format(y=year))
+    # ift_dfs[year].loc[idx_keep, order].dropna(subset='x_stere').to_csv(dataloc + year_folder + '/ift_clean_floe_properties_{y}.csv'.format(y=year))

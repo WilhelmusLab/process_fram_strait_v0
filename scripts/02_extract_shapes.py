@@ -49,15 +49,13 @@ for year in range(2003, 2021):
     all_props['date_idx'] = -1
     for date_idx in info_df.index:
         all_props.loc[all_props.datetime == info_df.loc[date_idx, 'SOIT time'], 'date_idx'] = date_idx
-    
-    
+  
     for date_idx in info_df.index:
         # Grab the subset matching the date
         df = all_props.loc[all_props.date_idx == date_idx] 
     
         # Loop through the floe library and add images to array
         # Assign floe label using the original floe index
-        count = 1
         segmented_image = np.zeros((nlayers, nrows, ncols))
         for row, data in df.iterrows():
             ri, ci = im_ref.index(data.x_stere, data.y_stere)
