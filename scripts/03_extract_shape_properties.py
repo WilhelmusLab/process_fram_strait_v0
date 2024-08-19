@@ -24,6 +24,7 @@ image_loc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_datase
 
 # Property tables are saved in a temp file
 props_loc = '../data/temp/floe_properties/'
+save_loc = '../data/temp/floe_properties_brightness/'
 
 # Sea ice concentration stored locally
 sic_loc = '/Users/dwatkin2/Documents/research/data/nsidc_daily_cdr/'
@@ -172,6 +173,6 @@ for year in range(2003, 2021):
              'fc_channel0', 'fc_channel1', 'fc_channel2']    
     data.rename(rename, axis=1, inplace=True)
     data = data.sort_values('datetime')
-    data.loc[:, order].to_csv(
-        '../data/all_floes/ift_floe_properties_with_pixel_brightness_{y}.csv'.format(y=year))
+    data.loc[:, order].to_csv(save_loc + \
+        'ift_floe_properties_with_pixel_brightness_{y}.csv'.format(y=year))
 
