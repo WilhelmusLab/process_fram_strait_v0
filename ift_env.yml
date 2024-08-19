@@ -3,9 +3,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - cartopy=0.22.0
   - numpy
   - pandas
-  - pyproj
+  - proplot=0.9.7
   - python=3.9.13
   - rasterio
   - scipy

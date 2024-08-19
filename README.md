@@ -13,10 +13,20 @@ In addition to the original implementation of IFT, we introduce a post-processin
 For questions and comments, reach out to Daniel Watkins (`daniel_watkins@brown.edu`).
 
 ## The Ice Floe Tracker algorithm
-The IFT 
+Description of the IFT, with a flowchart.
 
 
-# Data setup
+## Processing framework
+![Flowchart describing processing pathway. Blue arrows are inputs, red arrows are outputs. Light purple blocks indicate temporary files, and dark purple blocks are archived files.](./docs/processing_flowchart.png)
+
+
+
+# Setup
+## Installing required software
+The python environment used to run the scripts here can be recreated using the `ift_env.yml` file. After installing miniconda, open a terminal, navigate to the project folders, and run
+```conda env create -f ift_env.yml```
+
+
 ## Downloading MODIS imagery via IFT Pipeline
 The MODIS dataset is large, even when subsetted to the study area, and is therefore not included in this repository. To download the data, we use the Ice Floe Tracker Pipeline. The file `scripts/00_setup_ft_table.py` generates the set of CSV files in the folder `data/modis_download_spec_files`. To download the MODIS imagery on the Oscar HPC system at Brown, after installing the Ice Floe Tracker Pipeline, modify the Cylc graph in `flow_template_hpc.j2` to read:
 
@@ -44,9 +54,6 @@ cylc tui fram_strait_images
 ## Sea ice concentration
 We use the sea ice concentration Climate Data Record (Meier et al., 2021).
 
-# Processing framework
-![Flowchart describing processing pathway. Blue arrows are inputs, red arrows are outputs. Light purple blocks indicate temporary files, and dark purple blocks are archived files.](./docs/processing_flowchart.png)
-
 ## 1. Extracting floe property tables
 The MATLAB code produces files with floe properties and floe positions for (a) all candidate floe segments and (b) for all floes that were matched to a subsequent image. The file `01_parse_ft_data.py` extracts the floe properties and positions from the MATLAB output. Along with the values originally in the props.mat file, it adds a `floe_label` so that tracked floes can be assembled into trajectories. The files `time_data.csv` were manually created using a variety of sources including saved diagnostic images and output from the SOIT python function. It maps the index in the FLOE_LIBRARY and props.mat to time stamps and specific satellites. 
 
@@ -58,9 +65,17 @@ Floe shapes are stored in a MATLAB structure `FLOE_LIBRARY.mat`. This structure 
 Floe properties were initially calculated in MATLAB and are saved by the `01_parse_ft_data.py` script. There are differences in the algorithms used by scikit image region properties function and the identically named function in MATLAB. For future compatibility with the IFT Julia version, which uses scikit image, we recalculate region properties and add these to the floe property tables. This step also allows us to get consistent bounding boxes and row/col centroid data for the shapes. Using the shapes extracted in the previous step, and the truecolor and falsecolor images, we get the mean intensity for each color channel within each floe. This data is used for filtering true and false positives from the floe property tables.
 
 ## 4. Cleaning dataset using logistic regression function
-The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives. However, the floe circularity is, in general, a necessary but not sufficient criterion. Many false positives also have similar circularity properties as real floes. 
+The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives. However, the floe circularity is, in general, a necessary but not sufficient criterion. Many false positives also have similar circularity properties as real floes. We leverage the information from the truecolor and falsecolor images to perform logistic regression classification. 
 
-TBD: Description of LR classifier fitting and performance
+The logistic regression model maps a set of variables to a value from 0 to 1, interpretted as a probability of belonging to a class. To train and evaluate the model, we first need label a set of floes as true positives and false positives. We rely on the floe tracker to select true positive floes. We filter the tracked floes to only include those that traveled a total distance of at least a pixel, had average speeds greater than 0.01 m/s and less than 1.5 m/s, and were in a region with sea ice in the NSIDC sea ice concentration dataset. Next, we identify false positives in the floes with 0 sea ice concentration from NSIDC, anomalous floe length scale relative to the sea ice concentration, and with either circularity less than 0.2 or solidity less than 0.4. 
+
+We use the scikit-learn logistic regression cross validation function to fit the model. We use 10-fold cross validation. Data is split so that 2/3 of the random sample is used for training and 1/3 for testing. Model metrics:
+
+F1 score:  0.907  
+Recall:  0.893  
+Precision:  0.922  
+
+
 
 ## 5. Filtering GeoTiff images
 This function removes floes flagged as false positives from the GeoTiff images, while retaining the original labels.
@@ -69,16 +84,14 @@ TBD: Example images
 
 ## 6. Interpolate trajectories
 For analysis of velocity and rotation rate, we have to first align the data with a regular time grid. 
-TBD: Describe method for interpolation, method for calculating the rotation rate
 
+TBD: Describe method for interpolation, method for calculating the rotation rate  
 TBD: Example image
 
 # Final dataset structure
-TBD: File tree for the Digital Repository
-
-TBD: Number of images, file types
-
-TBD: Data structure for the floe property tables:
+TBD: File tree for the Digital Repository  
+TBD: Number of images, file types  
+TBD: Data structure for the floe property tables  
 |Column|Description|Units|
 |---|---|---|
 |area| | |
