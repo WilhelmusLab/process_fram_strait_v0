@@ -101,8 +101,6 @@ TBD: Data structure for the floe property tables
 |label|Integer object label in the segmented image| NA |
 
 # Cleaning the dataset using the logistic regression classifier
-
-
 The logistic regression model maps a set of variables to a value from 0 to 1, interpretted as a probability of belonging to a class. To train and evaluate the model, we first need label a set of floes as true positives and false positives. We rely on the floe tracker to select true positive floes. We filter the tracked floes to only include those that traveled a total distance of at least a pixel, had average speeds greater than 0.01 m/s and less than 1.5 m/s, and were in a region with sea ice in the NSIDC sea ice concentration dataset. Next, we identify false positives in the floes with 0 sea ice concentration from NSIDC, anomalous floe length scale relative to the sea ice concentration, and with either circularity less than 0.2 or solidity less than 0.4. 
 
 We use the scikit-learn logistic regression cross validation function to fit the model. We use 10-fold cross validation. Data is split so that 2/3 of the random sample is used for training and 1/3 for testing. Model metrics:
@@ -111,6 +109,19 @@ F1 score:  0.907
 Recall:  0.893  
 Precision:  0.922  
 
+# Generating the README pdf file
+We use `pandoc` to convert the markdown file to PDF. After installing `pandoc` (e.g. using `homebrew` on mac) and a LaTeX interpreter, you can run the line
+```pandoc -s -V geometry:margin=1in -o README.pdf README.md```
+in the terminal to create the PDF file with 1 inch margins.
+
+# Contributors
+* Daniel Watkins
+* Rosalinda Lopez-Acosta
+* Monica Martinez Wilhelmus
+* Minki Kim
+* Ashfaq Ahmed
+* Ellen Buckley
+* Simon Hatcher
 
 # References
 1. Buckley, E., Cañuelas, Timmermans, M.-L., and Wilhelmus, M. M. (2023), "Seasonal Evolution of the Sea Ice Floe Size Distribution from Two Decades of MODIS Data," EGUsphere (preprint), https://doi.org/10.5194/egusphere-2024-89
@@ -122,11 +133,4 @@ Precision:  0.922
 7. Van der Walt, S., Schönberger, Johannes L, Nunez-Iglesias, J., Boulogne, Franccois, Warner, J. D., Yager, N., ..., Yu, T. (2014). scikit-image: image processing in Python. PeerJ, 2, e453.
 8. Watkins, D. M., Bliss, A. C., Hutchings, J. K., Wilhelmus, M. M. (2023), "Evidence of abrupt transitions between sea ice dynamical regimes in the East Greenland marginal ice zone", Geophysical Research Letters, 50, e2023GL103558, pp. 1-10
 
-# Contributors
-* Daniel Watkins
-* Rosalinda Lopez-Acosta
-* Monica Martinez Wilhelmus
-* Minki Kim
-* Ashfaq Ahmed
-* Ellen Buckley
-* Simon Hatcher
+

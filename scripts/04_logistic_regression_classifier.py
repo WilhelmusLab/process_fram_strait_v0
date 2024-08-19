@@ -62,6 +62,11 @@ for year in range(2003, 2021):
     # Drop too-small floes (really only for 2020 since the others already filtered)
     ift_df = ift_df.loc[ift_df.area >= 300].copy() 
 
+    # Drop segmented objects that are on land
+    n_before = ift_df.shape[0]
+    ift_df = ift_df.loc[ift_df.nsidc_sic != 2.54].copy()
+    print('Dropping n=', n_before - ift_df.shape[0], 'land segments')
+    
     ift_df['circularity'] = 4*np.pi*ift_df['area']/ift_df['perimeter']**2 
     # Circularity really only goes from 0 to 1, however since there is some uncertainty
     # in perimeter calculations for discrete data I include a tolerance for higher values.
@@ -90,11 +95,12 @@ for year in range(2003, 2021):
     # Set objects with 0 sea ice concentration as "False positive"
     ift_df.loc[ift_df.nsidc_sic == 0, 'classification'] = 'FP'
 
-    # Set objects that are on land as "False positive"
-    ift_df.loc[ift_df.nsidc_sic == 2.54, 'classification'] = 'FP'
+    # Dropping these completely!
+    # # Set objects that are on land as "False positive"
+    # ift_df.loc[ift_df.nsidc_sic == 2.54, 'classification'] = 'FP'
 
     # Set objects with unphysically low circularity and solidity as "False positive"
-    ift_df.loc[((ift_df['circularity']   < 0.2) | (ift_df['solidity'] < 0.4)), 'classification'] = 'FP'
+    ift_df.loc[((ift_df['circularity']  < 0.2) | (ift_df['solidity'] < 0.4)), 'classification'] = 'FP'
     
     # Finally, the tracked floes that passed the two filters are labeled "True positive"
     ift_df.loc[df_floes.index, 'classification'] = 'TP'    
