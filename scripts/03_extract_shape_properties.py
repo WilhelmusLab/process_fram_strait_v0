@@ -1,8 +1,7 @@
 """
 Using the segmented GeoTiffs and the property tables, expand the 
 property table with pixel brightness from the satellite imagery, 
-re-calculate shape properties using scikit-image for consistency,
-add sea ice concentration from the NSIDC climate data record, and
+re-calculate shape properties using scikit-image for consistency, and
 save the resulting CSV files to the repo and to the archive.
 """
 import os
@@ -45,46 +44,46 @@ def get_month_folder(date):
     
     return '-'.join(['fram_strait', start, end])
 
-def interp_sic(position_data, sic_data):
-    """Uses the xarray advanced interpolation to get along-track sic
-    via nearest neighbors. Nearest neighbors is preferred because numerical
-    flags are used for coasts and open ocean, so interpolation is less meaningful."""
-    # Sea ice concentration uses NSIDC NP Stereographic
-    crs0 = pyproj.CRS('WGS84')
-    crs1 = pyproj.CRS('+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +k=1 +x_0=0 +y_0=0 +a=6378273 +b=6356889.449 +units=m +no_defs')
-    transformer_stere = pyproj.Transformer.from_crs(crs0, crs_to=crs1, always_xy=True)
+# def interp_sic(position_data, sic_data):
+#     """Uses the xarray advanced interpolation to get along-track sic
+#     via nearest neighbors. Nearest neighbors is preferred because numerical
+#     flags are used for coasts and open ocean, so interpolation is less meaningful."""
+#     # Sea ice concentration uses NSIDC NP Stereographic
+#     crs0 = pyproj.CRS('WGS84')
+#     crs1 = pyproj.CRS('+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +k=1 +x_0=0 +y_0=0 +a=6378273 +b=6356889.449 +units=m +no_defs')
+#     transformer_stere = pyproj.Transformer.from_crs(crs0, crs_to=crs1, always_xy=True)
     
-    sic = pd.Series(data=np.nan, index=position_data.index)
+#     sic = pd.Series(data=np.nan, index=position_data.index)
     
-    for date, group in position_data.groupby(position_data.datetime.dt.date):
-        x_stere, y_stere = transformer_stere.transform(
-            group.longitude, group.latitude)
+#     for date, group in position_data.groupby(position_data.datetime.dt.date):
+#         x_stere, y_stere = transformer_stere.transform(
+#             group.longitude, group.latitude)
         
-        x = xr.DataArray(x_stere, dims="z")
-        y = xr.DataArray(y_stere, dims="z")
-        SIC = sic_data.sel(time=date.strftime('%Y-%m-%d'))['sea_ice_concentration'].interp(
-            {'x': x,
-             'y': y}, method='nearest').data
+#         x = xr.DataArray(x_stere, dims="z")
+#         y = xr.DataArray(y_stere, dims="z")
+#         SIC = sic_data.sel(time=date.strftime('%Y-%m-%d'))['sea_ice_concentration'].interp(
+#             {'x': x,
+#              'y': y}, method='nearest').data
 
-        sic.loc[group.index] = np.round(SIC.T, 3)
-    return sic
+#         sic.loc[group.index] = np.round(SIC.T, 3)
+#     return sic
     
 for year in range(2003, 2021): 
     #### Load IFT data
     ift_df = pd.read_csv(props_loc + 'ift_floe_properties_{y}.csv'.format(y=year), index_col=0)
     ift_df['datetime'] = pd.to_datetime(ift_df.datetime.values)
 
-    # Add sea ice concentration column
-    with xr.open_dataset(sic_loc + '/aggregate/seaice_conc_daily_nh_' + \
-                     str(year) + '_v04r00.nc') as sic_data:
-        ds = xr.Dataset({'sea_ice_concentration':
-                         (('time', 'y', 'x'), sic_data['cdr_seaice_conc'].data)},
-                           coords={'time': (('time', ), sic_data['time'].data),
-                                   'x': (('x', ), sic_data['xgrid'].data), 
-                                   'y': (('y', ), sic_data['ygrid'].data)})
+    # # Add sea ice concentration column
+    # with xr.open_dataset(sic_loc + '/aggregate/seaice_conc_daily_nh_' + \
+    #                  str(year) + '_v04r00.nc') as sic_data:
+    #     ds = xr.Dataset({'sea_ice_concentration':
+    #                      (('time', 'y', 'x'), sic_data['cdr_seaice_conc'].data)},
+    #                        coords={'time': (('time', ), sic_data['time'].data),
+    #                                'x': (('x', ), sic_data['xgrid'].data), 
+    #                                'y': (('y', ), sic_data['ygrid'].data)})
     
-        sic = interp_sic(ift_df, ds)
-        ift_df['nsidc_sic'] = np.round(sic, 2)
+    #     sic = interp_sic(ift_df, ds)
+    #     ift_df['nsidc_sic'] = np.round(sic, 2)
 
     rename_vars = {v: v + '_matlab' for v in ift_df.columns if v in properties}
     

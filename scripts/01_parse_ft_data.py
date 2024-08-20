@@ -34,6 +34,30 @@ dataloc = '../data/matlab_output/'
 ref_image_loc = '../data/NE_Greenland.2017100.terra.250m.tif'
 sic_loc = '/Users/dwatkin2/Documents/research/data/nsidc_daily_cdr/'
 
+def interp_sic(position_data, sic_data):
+    """Uses the xarray advanced interpolation to get along-track sic
+    via nearest neighbors. Nearest neighbors is preferred because numerical
+    flags are used for coasts and open ocean, so interpolation is less meaningful."""
+    # Sea ice concentration uses NSIDC NP Stereographic
+    crs0 = pyproj.CRS('WGS84')
+    crs1 = pyproj.CRS('+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +k=1 +x_0=0 +y_0=0 +a=6378273 +b=6356889.449 +units=m +no_defs')
+    transformer_stere = pyproj.Transformer.from_crs(crs0, crs_to=crs1, always_xy=True)
+    
+    sic = pd.Series(data=np.nan, index=position_data.index)
+    
+    for date, group in position_data.groupby(position_data.datetime.dt.date):
+        x_stere, y_stere = transformer_stere.transform(
+            group.longitude, group.latitude)
+        
+        x = xr.DataArray(x_stere, dims="z")
+        y = xr.DataArray(y_stere, dims="z")
+        SIC = sic_data.sel(time=date.strftime('%Y-%m-%d'))['sea_ice_concentration'].interp(
+            {'x': x,
+             'y': y}, method='nearest').data
+
+        sic.loc[group.index] = np.round(SIC.T, 3)
+    return sic
+
 # Copy of the parser that has different names so it can read the x_fixed files
 def parser_ift(year, dataloc, ref_image_loc):
     """Read the separate matlab and csv files with info on x, y, and datetime,
@@ -231,6 +255,7 @@ def parser_ift(year, dataloc, ref_image_loc):
 
     return df_all_props   
 
+
 for year in range(2003, 2021):
     print(year)
     props = parser_ift(year=year,    
@@ -242,5 +267,17 @@ for year in range(2003, 2021):
     if n_missing > 0:
         print('Warning: Missing position data for', n_missing, 'floes')
 
+    # Add sea ice concentration column
+    with xr.open_dataset(sic_loc + '/aggregate/seaice_conc_daily_nh_' + \
+                     str(year) + '_v04r00.nc') as sic_data:
+        ds = xr.Dataset({'sea_ice_concentration':
+                         (('time', 'y', 'x'), sic_data['cdr_seaice_conc'].data)},
+                           coords={'time': (('time', ), sic_data['time'].data),
+                                   'x': (('x', ), sic_data['xgrid'].data), 
+                                   'y': (('y', ), sic_data['ygrid'].data)})
+    
+        sic = interp_sic(props, ds)
+        props['nsidc_sic'] = np.round(sic, 2)
+    
     ## Save locally -- data will get added to this down the line.
     props.to_csv(saveloc + 'floe_properties/ift_floe_properties_{y}.csv'.format(y=year))

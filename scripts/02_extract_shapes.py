@@ -12,7 +12,7 @@ dataloc = '/Volumes/Research/ENG_Wilhelmus_Shared/group/IFT_fram_strait_dataset/
 
 # Set the year to process
 for year in range(2003, 2021):
-    
+    print(year)
     # Format for the year folders is fram_strait-YYYY
     year_folder = 'fram_strait-{y}'.format(y=year)
     
@@ -49,11 +49,13 @@ for year in range(2003, 2021):
     all_props['date_idx'] = -1
     for date_idx in info_df.index:
         all_props.loc[all_props.datetime == info_df.loc[date_idx, 'SOIT time'], 'date_idx'] = date_idx
-  
+
+    # Remove any segments that are over land
+    all_props = all_props.loc[all_props.nsidc_sic != 2.54, :].copy()
+    
     for date_idx in info_df.index:
         # Grab the subset matching the date
         df = all_props.loc[all_props.date_idx == date_idx] 
-    
         # Loop through the floe library and add images to array
         # Assign floe label using the original floe index
         segmented_image = np.zeros((nlayers, nrows, ncols))

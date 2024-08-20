@@ -219,6 +219,7 @@ for year in ift_dfs:
     year_folder = 'fram_strait-{y}'.format(y=year)
     idx_keep = (ift_dfs[year]['init_classification'] == 'TP') | (ift_dfs[year].lr_classification & (ift_dfs[year]['init_classification'] != 'FP'))
     ift_dfs[year].loc[idx_keep, 'final_classification'] = True
+    
     # Save locally
     ift_dfs[year].loc[:, order].to_csv('../data/temp/floe_properties_classified/ift_raw_floe_properties_{y}.csv'.format(y=year))
 
