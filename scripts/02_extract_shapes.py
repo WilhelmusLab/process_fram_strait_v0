@@ -50,8 +50,8 @@ for year in range(2003, 2021):
     for date_idx in info_df.index:
         all_props.loc[all_props.datetime == info_df.loc[date_idx, 'SOIT time'], 'date_idx'] = date_idx
 
-    # Remove any segments that are over land
-    all_props = all_props.loc[all_props.nsidc_sic != 2.54, :].copy()
+    # Remove any segments that are over land or within the coastal mask
+    all_props = all_props.loc[all_props.nsidc_sic <= 1, :].copy()
     
     for date_idx in info_df.index:
         # Grab the subset matching the date

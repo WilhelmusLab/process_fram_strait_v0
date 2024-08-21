@@ -69,9 +69,12 @@ def get_month_folder(date):
 #     return sic
     
 for year in range(2003, 2021): 
+    print(year)
+    
     #### Load IFT data
     ift_df = pd.read_csv(props_loc + 'ift_floe_properties_{y}.csv'.format(y=year), index_col=0)
     ift_df['datetime'] = pd.to_datetime(ift_df.datetime.values)
+
 
     # # Add sea ice concentration column
     # with xr.open_dataset(sic_loc + '/aggregate/seaice_conc_daily_nh_' + \
@@ -134,8 +137,7 @@ for year in range(2003, 2021):
                              'intensity_mean-2': 'fc_channel2'}, axis=1, inplace=True)
             
             props = props_tc.merge(props_fc, left_on='label', right_on='label')
-            
-            # del lb_im, tc_im, fc_im, props_tc, props_fc, props
+
         except:
             print('Image read failed for date', date)
             props = pd.DataFrame(regionprops_table(lb_im[:, :, 0], 

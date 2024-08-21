@@ -43,13 +43,12 @@ def net_displacement_pixels(floe_df):
     delta_y = floe_df['row_pixel'].values[0] - floe_df['row_pixel'].values[-1]
     return np.sqrt(delta_x**2 + delta_y**2)
 
-def estimated_mean_speed(floe_df):
+def estimated_max_speed(floe_df):
     """Calculates distance traversed in units of pixels"""
     delta_x = floe_df['x_stere'] - floe_df['x_stere'].shift(-1)
     delta_y = floe_df['y_stere'] - floe_df['y_stere'].shift(-1)
-    dt = (floe_df['datetime'].max() - floe_df['datetime'].min()).total_seconds()
-    return np.round((np.sqrt(delta_x**2 + delta_y**2)).sum()/dt, 3)
-
+    dt = floe_df['datetime'] - floe_df['datetime'].shift(-1)
+    return np.round(np.abs(np.sqrt(delta_x**2 + delta_y**2)/dt.dt.total_seconds()).max(), 3)
 
 #### Load the dataframes with pixel brightness
 pb_dataloc = '../data/temp/floe_properties_brightness/'
@@ -64,7 +63,7 @@ for year in range(2003, 2021):
 
     # Drop segmented objects that are on land
     n_before = ift_df.shape[0]
-    ift_df = ift_df.loc[ift_df.nsidc_sic != 2.54].copy()
+    ift_df = ift_df.loc[ift_df.nsidc_sic <= 1.].copy()
     print('Dropping n=', n_before - ift_df.shape[0], 'land segments')
     
     ift_df['circularity'] = 4*np.pi*ift_df['area']/ift_df['perimeter']**2 
@@ -81,23 +80,23 @@ for year in range(2003, 2021):
     df_floes = ift_df.loc[ift_df.floe_id != 'unmatched']
     
     # Require a minimum of at least 1 pixel total displacement
-    df_floes = df_floes.groupby('floe_id').filter(lambda x: net_displacement_pixels(x) > 1)
+    df_floes = df_floes.groupby('floe_id').filter(lambda x: net_displacement_pixels(x) > 2)
     
-    # Average speed has to be less than 1.5 m/s and greater than 0.01 m/s
-    df_floes = df_floes.groupby('floe_id').filter(lambda x: (estimated_mean_speed(x) < 1.5) & \
-                (estimated_mean_speed(x) > 0.01))
+    # Max speed has to be less than 1 m/s and greater than 0.05 m/s
+    df_floes = df_floes.groupby('floe_id').filter(lambda x: (estimated_max_speed(x) < 1) & \
+                (estimated_max_speed(x) > 0.05))
+
     # Remove SIC=0 and landmasked floes from TP dataset
     df_floes = df_floes.loc[(df_floes.nsidc_sic > 0) & (df_floes.nsidc_sic <= 1)]
+
+    # Ice objects in Scoresby Sound are usually fast ice, don't include in the training data
+    df_floes = df_floes.loc[~((df_floes.x_stere < 0.85e6) & (df_floes.y_stere < -1.93e6)),:].copy()
 
     # Default classification is "Unknown"
     ift_df['classification'] = 'UK'
 
     # Set objects with 0 sea ice concentration as "False positive"
     ift_df.loc[ift_df.nsidc_sic == 0, 'classification'] = 'FP'
-
-    # Dropping these completely!
-    # # Set objects that are on land as "False positive"
-    # ift_df.loc[ift_df.nsidc_sic == 2.54, 'classification'] = 'FP'
 
     # Set objects with unphysically low circularity and solidity as "False positive"
     ift_df.loc[((ift_df['circularity']  < 0.2) | (ift_df['solidity'] < 0.4)), 'classification'] = 'FP'
@@ -132,7 +131,8 @@ for year in ift_dfs:
     for month, group in ift_dfs[year].groupby(ift_dfs[year].datetime.dt.month):
         if month != 3: # Only 1 day in March in any year, so we skip it. Only use full months.
             samples = group.loc[group.classification != 'UK'].groupby(
-                    'classification').apply(lambda x: x.sample(min(len(x), 1000), replace=False, random_state=rs))
+                    'classification').apply(
+                lambda x: x.sample(min(len(x), 1000), replace=False, random_state=rs))
             if len(samples) > 0:
                 data_samples.append(samples)
             else:
