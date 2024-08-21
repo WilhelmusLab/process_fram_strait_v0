@@ -22,7 +22,7 @@ def get_month_folder(date):
     
     return '-'.join(['fram_strait', start, end])
 
-for year in range(2003, 2021):
+for year in range(2015, 2021):
     print(year)
     # Format for the year folders is fram_strait-YYYY
     year_folder = 'fram_strait-{y}'.format(y=year)
@@ -37,7 +37,7 @@ for year in range(2003, 2021):
     info_df['SOIT time'] = pd.to_datetime(info_df['SOIT time'])
 
     all_props = pd.read_csv(os.path.join(dataloc, year_folder, filename), index_col=0)
-    all_props.fillna({'init_classification': 'NA'}, inplace=True)
+    all_props.fillna({'init_classification': 'UK'}, inplace=True)
     all_props['datetime'] = pd.to_datetime(all_props['datetime'].values)
     all_props['date_idx'] = -1
     for date_idx in info_df.index:
@@ -46,7 +46,7 @@ for year in range(2003, 2021):
 
     for date_idx in info_df.index[1:]:
         # Grab the subset matching the date
-        df = all_props.loc[all_props.date_idx == date_idx] 
+        df = all_props.loc[all_props.date_idx == date_idx]
         month_folder = get_month_folder(info_df.loc[date_idx, 'SOIT time'])
         
         fname_raw = '{d}.{s}.{l}.250m.tiff'.format(d=info_df.loc[date_idx, 'SOIT time'].strftime('%Y%m%d'),

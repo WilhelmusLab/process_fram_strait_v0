@@ -220,6 +220,11 @@ for year in ift_dfs:
     idx_keep = (ift_dfs[year]['init_classification'] == 'TP') | (ift_dfs[year].lr_classification & (ift_dfs[year]['init_classification'] != 'FP'))
     ift_dfs[year].loc[idx_keep, 'final_classification'] = True
     
+    # Ice objects in Scoresby Sound are usually fast ice, drop these objects
+    idx_drop = (ift_dfs[year].x_stere < 0.85e6) & ((ift_dfs[year].y_stere < -1.93e6) & (ift_dfs[year].y_stere > -2.5e6))
+    ift_dfs[year].loc[idx_drop, 'final_classification'] = False
+    
+    
     # Save locally
     ift_dfs[year].loc[:, order].to_csv('../data/temp/floe_properties_classified/ift_raw_floe_properties_{y}.csv'.format(y=year))
 
