@@ -1,4 +1,6 @@
-# Greenland Sea Ice Floe Segmentation and Tracking Via the Ice Floe Tracker Algorithm
+# Fram Strait sea ice floe segmentation and tracking from moderate-resolution optical imagery
+Rosalinda Lopez-Acosta, Daniel M. Watkins, Minki Kim, Ashfaq Ahmed, Ellen Buckley, Monica Wilhelmus
+
 The Ice Floe Tracker (IFT) algorithm automatically identifies sea ice floes in marginal ice zones from optical satellite imagery, then uses a feature-matching approach to track individual ice floe rotation and displacement. 
 The algorithm is described in Lopez-Acosta et al. (2019) and briefly summarized below.
 It was developed by Rosalinda Lopez-Acosta during her PhD work at University of California-Riverside under the guidance of Monica M. Wilhelmus (Lopez-Acosta, 2021). 
@@ -13,8 +15,11 @@ Access to additional datasets, in the form of true and false color MODIS imagery
 
 Questions? Contact: Daniel Watkins (`daniel_watkins@brown.edu`).
 
+![Flowchart describing IFT processing](./figures/IFT_flowchart.png)
+
 ## The Ice Floe Tracker algorithm
-Description of the IFT, with a flowchart.
+The Ice Floe Tracker algorithm consists of a series of processing steps to sharpen and normalize an image, extract features, then to link features across images.
+The image processing step applies land and cloud masks, increases the contrast between water and ice, applies an adaptive histogram equalization, and normalizes the image. The processed image is then segmented using $k$-means clustering and watershed methods. Feature extraction collects shape properties (e.g., area, perimeter, centroid) from potential floes. Here we consider only potential floes with at least 300 pixels and at most 90,000 pixels (18.75 km$^2$ to 5,625 km$^2$). Details of the algorithm are provided in Lopez-Acosta et al., 2019.
 
 # Setup
 ## Installing required software
@@ -50,7 +55,7 @@ cylc tui fram_strait_images
 ## Sea ice concentration data
 We use the sea ice concentration Climate Data Record (Meier et al., 2021). After downloading the 2003-2020 CDR data, change the `sic_loc` parameter in the script `03_extract_shape_properties` to point to this location. Sea ice concentration is interpolated to ice floe positions using nearest neighbors, thus preserving information on coast mask and land from the CDR.
  
-![Figure 1. Flowchart describing processing pathway. Blue arrows are inputs, red arrows are outputs. Light purple blocks indicate temporary files, and dark purple blocks are archived files.](./figures/processing_flowchart.png)
+![Flowchart describing processing pathway. Blue arrows are inputs, red arrows are outputs. Light purple blocks indicate temporary files, and dark purple blocks are archived files.](./figures/processing_flowchart.png)
  
 ## Processing framework
 
@@ -79,14 +84,19 @@ Finally, we calculate daily estimates of floe position, rotation, and displaceme
 4. Otherwise, no estimated rotation is returned.
 
 # Final dataset structure
-![Figure 2. File tree organization](./figures/folder_structure.png)
-The images and data are organized according to year, month, and filetype. The structure is shown in Figure 2. Folders are in dark colors, files are in pale colors. At the root level, there is a folder for each year. Within the year folders, there is a folder for each month. Note that March 31st is included as the first day processed; the day is included in the April folder. Also within the year folder, there are three CSV tables containing the full floe properties table, the table with only the cleaned data, and a table with daily resolution interpolated trajectories. Within the month folders, there is a landmask (TIFF) file and the satellite overpass times (CSV). MODIS imagery is contained in the truecolor and falsecolor folders. Finally, GeoTiffs with the raw IFT output are saved in `labeled_raw` and cleaned output is saved in `labeled_clean`.
+
+![File tree organization](./figures/folder_structure.png)
+
+The images and data are organized according to year, month, and filetype. The structure is shown in Figure 3. Folders are in dark colors, files are in pale colors. At the root level, there is a folder for each year. Within the year folders, there is a folder for each month. Note that March 31st is included as the first day processed; the day is included in the April folder. Also within the year folder, there are three CSV tables containing the full floe properties table, the table with only the cleaned data, and a table with daily resolution interpolated trajectories. Within the month folders, there is a landmask (TIFF) file and the satellite overpass times (CSV). MODIS imagery is contained in the truecolor and falsecolor folders. Finally, GeoTiffs with the raw IFT output are saved in `labeled_raw` and cleaned output is saved in `labeled_clean`.
 
 ## Data overview
-![Figure 3. Statistical summary of dataset](./figures/data_summary_fram_strait.png)
-Figure 3 shows a summary of the observation availability for the Fram Strait region. As with the Beaufort Sea region, data span years 2003-2020. Panel a) shows the observation count within 25-km by 25-km bins after cleaning. Panel b) shows the number of candidate segments (raw, blue) and segments after filtering (clean, orange). A subset of these objects were successfully tracked (green). When time resolution suffices, rotation rates were calculated (pink). Panel c) shows the length of the recovered trajectories in days. Most trajectories are less than 5 days long; there is substantial variability from year to year.
 
-![Figure 4. Example of segmented image](./figures/20140501-aqua-example.png)
+![Statistical summary of dataset](./figures/data_summary_fram_strait.png)
+
+Figure 4 shows a summary of the observation availability for the Fram Strait region. As with the Beaufort Sea region, data span years 2003-2020. Panel a) shows the observation count within 25-km by 25-km bins after cleaning. Panel b) shows the number of candidate segments (raw, blue) and segments after filtering (clean, orange). A subset of these objects were successfully tracked (green). When time resolution suffices, rotation rates were calculated (pink). Panel c) shows the length of the recovered trajectories in days. Most trajectories are less than 5 days long; there is substantial variability from year to year.
+
+![Example of segmented image](./figures/20140501-aqua-example.png)
+
 Finally, we show an example of the processed Aqua image for May 1, 2014. The truecolor image is on the left, the falsecolor image is in the middle. On the right, you can see the segmented image overlaid. Objects that have been removed as non-floes are in red, and objects classified as ice floes are in blue.
 
 The table describes the contents of the property tables.
