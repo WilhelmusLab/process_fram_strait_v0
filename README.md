@@ -15,7 +15,7 @@ Access to additional datasets, in the form of true and false color MODIS imagery
 
 Questions? Contact: Daniel Watkins (`daniel_watkins@brown.edu`).
 
-![Flowchart describing IFT processing](./figures/IFT_flowchart.png)
+![Flowchart describing IFT processing](./figures/ift_flowchart.png)
 
 ## The Ice Floe Tracker algorithm
 The Ice Floe Tracker algorithm consists of a series of processing steps to sharpen and normalize an image, extract features, then to link features across images.
