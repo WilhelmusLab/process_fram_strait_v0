@@ -22,7 +22,7 @@ def get_month_folder(date):
     
     return '-'.join(['fram_strait', start, end])
 
-for year in range(2015, 2021):
+for year in range(2003, 2021):
     print(year)
     # Format for the year folders is fram_strait-YYYY
     year_folder = 'fram_strait-{y}'.format(y=year)

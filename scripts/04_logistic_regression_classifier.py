@@ -224,10 +224,9 @@ for year in ift_dfs:
     idx_drop = (ift_dfs[year].x_stere < 0.85e6) & ((ift_dfs[year].y_stere < -1.93e6) & (ift_dfs[year].y_stere > -2.5e6))
     ift_dfs[year].loc[idx_drop, 'final_classification'] = False
     
-    
     # Save locally
     ift_dfs[year].loc[:, order].to_csv('../data/temp/floe_properties_classified/ift_raw_floe_properties_{y}.csv'.format(y=year))
 
     # Uncomment these lines to save to archive
     ift_dfs[year].loc[:, order].to_csv(dataloc + year_folder + '/ift_raw_floe_properties_{y}.csv'.format(y=year))
-    ift_dfs[year].loc[idx_keep, order].dropna(subset='x_stere').to_csv(dataloc + year_folder + '/ift_clean_floe_properties_{y}.csv'.format(y=year))
+    ift_dfs[year].loc[ift_dfs[year].final_classification, order].dropna(subset='x_stere').to_csv(dataloc + year_folder + '/ift_clean_floe_properties_{y}.csv'.format(y=year))

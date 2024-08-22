@@ -48,18 +48,27 @@ cylc tui fram_strait_images
 ```
 
 ## Sea ice concentration data
-We use the sea ice concentration Climate Data Record (Meier et al., 2021). After downloading the 2003-2020 CDR data, change the `sic_loc` parameter in the script `03_extract_shape_properties` to point to this location.
-
+We use the sea ice concentration Climate Data Record (Meier et al., 2021). After downloading the 2003-2020 CDR data, change the `sic_loc` parameter in the script `03_extract_shape_properties` to point to this location. Sea ice concentration is interpolated to ice floe positions using nearest neighbors, thus preserving information on coast mask and land from the CDR.
+ 
+![Figure 1. Flowchart describing processing pathway. Blue arrows are inputs, red arrows are outputs. Light purple blocks indicate temporary files, and dark purple blocks are archived files.](./figures/processing_flowchart.png)
+ 
 ## Processing framework
-![Flowchart describing processing pathway. Blue arrows are inputs, red arrows are outputs. Light purple blocks indicate temporary files, and dark purple blocks are archived files.](./docs/processing_flowchart.png)
 
-The first step is to parse information in the `.mat` files and align the data into CSV files. The MATLAB code produces files with floe properties and floe positions for (a) all candidate floe segments and (b) for all floes that were matched to a subsequent image. The file `01_parse_ft_data.py` extracts the floe properties and positions from the MATLAB output. Along with the values originally in the props.mat file, it adds a `floe_label` so that tracked floes can be assembled into trajectories. The files `time_data.csv` were manually created using a variety of sources including saved diagnostic images and output from the SOIT python function. It maps the index in the FLOE_LIBRARY and props.mat to time stamps and specific satellites. 
+The first step is to parse information in the `.mat` files and align the data into CSV files. The MATLAB code produces files with floe properties and floe positions for (a) all candidate floe segments and (b) for all floes that were matched to a subsequent image. The file `01_parse_ft_data.py` extracts the floe properties and positions from the MATLAB output. Along with the values originally in the props.mat file, it adds a `floe_label` so that tracked floes can be assembled into trajectories. The files `time_data.csv` were manually created using a variety of sources including saved diagnostic images and output from the SOIT python function. It maps the index in the FLOE_LIBRARY and props.mat to time stamps and specific satellites.
 
 Next, we pull shapes from the `FLOE_LIBRAY.mat` data objects and place them into GeoTiffs. The MATLAB file structure efficiently holds the sparse dataset of labeled floe shapes. However it is not easily visualized or shared, and it is not self-describing. The script `02_extract_shapes.py` reads the data in the FLOE LIBRARY and in the floe property tables, then creates a GeoTiff sharing dimensions and coordinate reference system with the reference image `NE_Greenland.2017100.terra.250m.tif`. The file produced is an unfiltered segmented image where the labels of each floe correspond to the index in the FLOE_LIBRARY. A tracked floe will have different label numbers in each image. 
 
 Floe properties were initially calculated in MATLAB and are saved by the `01_parse_ft_data.py` script. There are differences in the algorithms used by scikit image region properties function and the identically named function in MATLAB. For future compatibility with the IFT Julia version, which uses scikit image, we recalculate region properties and add these to the floe property tables. Calculations are carried out in the script `03_extract_shape_properties.py`. This step also allows us to get consistent bounding boxes and row/col centroid data for the shapes. Using the shapes extracted in the previous step, and the truecolor and falsecolor images, we get the mean intensity for each color channel within each floe. This data is used for filtering true and false positives from the floe property tables.
 
-The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives. However, the floe circularity is, in general, a necessary but not sufficient criterion. Many false positives also have similar circularity properties as real floes. We leverage the information from the truecolor and falsecolor images to perform logistic regression classification. We use tracked floes to form a set of true positives for the training dataset, and apply information on sea ice concentration and geometry to form a set of false positives. The logistic regression methodology is described in detail in a later section. The script `04_logistic_regression_classifier.py` trains, tests, and applies the classification method, and saves the results to the archive with the format `ift_raw_floe_properties_YYYY.csv`, where YYYY is the year.
+The IFT segmentation step produces a set of candidate ice floes for matching. For estimates of the floe size distribution, ideally all detected floe shapes can be used (rather than only tracked floes). Tracking floes filters out candidate segments corresponding to bright patches in clouds, ice filements, clumps of ice floes below the image resolution, and other similar objects due to the tendency of these objects to deform strongly between images. Buckley et al. (2023) used floe circularity, a function of the floe perimeter and area, to filter out false positives. However, the floe circularity is, in general, a necessary but not sufficient criterion. Many false positives also have similar circularity properties as real floes. We leverage the information from the truecolor and falsecolor images to perform logistic regression classification. We use tracked floes to form a set of true positives for the training dataset, and apply information on sea ice concentration and geometry to form a set of false positives. The script `04_logistic_regression_classifier.py` trains, tests, and applies the classification method, and saves the results to the archive with the format `ift_raw_floe_properties_YYYY.csv`, where YYYY is the year.
+
+The logistic regression model maps a set of variables to a value from 0 to 1, interpretted as a probability of belonging to a class. To train and evaluate the model, we first need label a set of floes as true positives and false positives. We rely on the floe tracker to select true positive floes. We filter the tracked floes to only include those that traveled a total distance of at least a pixel, had average speeds greater than 0.01 m/s and less than 1.5 m/s, and were in a region with sea ice in the NSIDC sea ice concentration dataset. Next, we identify false positives in the floes with 0 sea ice concentration from NSIDC, anomalous floe length scale relative to the sea ice concentration, and with either circularity less than 0.2 or solidity less than 0.4. 
+
+We use the `scikit-learn` logistic regression cross validation function to fit the model. We use 10-fold cross validation. Data is split so that 2/3 of the random sample is used for training and 1/3 for testing. Model metrics:
+
+F1 score = 0.913  
+Recall = 0.902  
+Precision = 0.924    
 
 After fitting and applying the logistic regression function, we apply a decision rule where all the floes marked as true positive and false positive using the manual criteria retain those labels, and the remaining (majority) of objects are automatically assigned to the two categories.  The function `05_filter_geotiffs.py` reads the raw classified floe properties tables from the previous step and the raw segmented images, then removes all segments classified as false positives. These images are saved into the archive in the folder `labeled_clean`.
 
@@ -69,45 +78,54 @@ Finally, we calculate daily estimates of floe position, rotation, and displaceme
 3. If both are defined, and $|\theta_{Aqua} - \theta{Terra}| < 30^\circ$, calculate the average $\zeta$ between the two estimates.
 4. Otherwise, no estimated rotation is returned.
 
-
 # Final dataset structure
-TBD: File tree for the Digital Repository  
-TBD: Number of images, file types  
-TBD: Data structure for the floe property tables  
+![Figure 2. File tree organization](./figures/folder_structure.png)
+The images and data are organized according to year, month, and filetype. The structure is shown in Figure 2. Folders are in dark colors, files are in pale colors. At the root level, there is a folder for each year. Within the year folders, there is a folder for each month. Note that March 31st is included as the first day processed; the day is included in the April folder. Also within the year folder, there are three CSV tables containing the full floe properties table, the table with only the cleaned data, and a table with daily resolution interpolated trajectories. Within the month folders, there is a landmask (TIFF) file and the satellite overpass times (CSV). MODIS imagery is contained in the truecolor and falsecolor folders. Finally, GeoTiffs with the raw IFT output are saved in `labeled_raw` and cleaned output is saved in `labeled_clean`.
+
+## Data overview
+![Figure 3. Statistical summary of dataset](./figures/data_summary_fram_strait.png)
+Figure 3 shows a summary of the observation availability for the Fram Strait region. As with the Beaufort Sea region, data span years 2003-2020. Panel a) shows the observation count within 25-km by 25-km bins after cleaning. Panel b) shows the number of candidate segments (raw, blue) and segments after filtering (clean, orange). A subset of these objects were successfully tracked (green). When time resolution suffices, rotation rates were calculated (pink). Panel c) shows the length of the recovered trajectories in days. Most trajectories are less than 5 days long; there is substantial variability from year to year.
+
+![Figure 4. Example of segmented image](./figures/20140501-aqua-example.png)
+Finally, we show an example of the processed Aqua image for May 1, 2014. The truecolor image is on the left, the falsecolor image is in the middle. On the right, you can see the segmented image overlaid. Objects that have been removed as non-floes are in red, and objects classified as ice floes are in blue.
+
+The table describes the contents of the property tables.
+
 |Column|Description|Units|
 |---|---|---|
-|area| | |
-|perimeter| | |
-|major_axis| | |
-|minor_axis| | |
-|orientation| | |
-|x_pixel| Column coordinate in the original image |
-|y_pixel| Row coordinate in the original image |
-|convex_area| Area of the best-fit convex polygon |
-|solidity| Ratio of area to convex area | Unitless |
-|bbox1| | |
-|bbox2| | |
-|bbox3| | |
-|bbox4| | |
-|orig_idx|Index of row in floe property table in Matlab files| NA |
-|satellite|Name of satellite| NA |
-|floe_id|Unique label assigned to tracked floes|YYYY_NNNNN|
 |datetime|Time of satellite overpass of the image centroid|YYYY-mm-dd HH:MM|
-|x_stere|X-position of the floe centroid in NSIDC N. Polar Stereographic|meters|
-|y_stere|Y-position of the floe centroid in NSIDC N. Polar Stereographic|meters|
+|satellite|Name of satellite| NA |
+|floe\_id|Unique label assigned to tracked floes|YYYY_NNNNN|
+|label|Integer object label in the segmented image| NA |
 |longitude|Longitude of the floe centroid|Decimal Degrees|
 |latitude|Latitude of the floe centroid|Decimal Degrees|
-|nsidc_sic|Sea ice concentration of nearest grid cell from NSIDC CDR|Fraction|
-|label|Integer object label in the segmented image| NA |
+|x\_stere|X-position of the floe centroid in NSIDC N. Polar Stereographic|meters|
+|y\_stere|Y-position of the floe centroid in NSIDC N. Polar Stereographic|meters|
+|col\_pixel| Column coordinate in the original image |
+|row\_pixel| Row coordinate in the original image |
+|solidity| Ratio of area to convex area | Unitless |
+|orientation| Direction of the major axis | Radians |
+|circularity| $4 \pi \times$ area $/$ perimeter| Unitless |
+|axis\_major\_length| Major axis of best-fit ellipse | Pixels |
+|axis\_minor\_length| Minor axis of best-fit ellipse | Pixels |
+|area| Number of pixels in a segment| Pixels squared|
+|perimeter| Approximate number of pixels in the boundary | Pixels |
+|convex\_area| Area of the best-fit convex polygon |
+|bbox\_min\_row| Row coordinate of the left edge of the bounding box | Pixels  |
+|bbox\_max\_row| Row coordinate of the right edge of the bounding box | Pixels  |
+|bbox\_min\_col| Column coordinate of the bottom edge of the bounding box | Pixels  |
+|bbox\_max\_col| Column coordinate of the top edge of the bounding box | Pixels  |
+|\_matlab| Value from the original calculation in Matlab | |
+|nsidc\_sic|Sea ice concentration of nearest grid cell from NSIDC CDR|Fraction|
+|theta\_aqua|Rotation angle until the next day Aqua image | Degrees |
+|theta\_terra|Rotation angle until the next day Terra image | Degrees |
+|tc\_channelX| Floe average of X channel of the true color image | Intensity |
+|fc\_channelX| Floe average of X channel of the false color image | Intensity |
+|init\_classification| Classification of true positive (TP), false positive (FP), or unknown (UK) by manual criteria | NA |
+|lr\_probability| Probability of being an ice floe from logistic regression model | unitless |
+|lr\_classification | Classification of ice floe (True) or non floe (False) | Boolean |
+|final\_classification| Classification after merging with init classification | Boolean |
 
-# Cleaning the dataset using the logistic regression classifier
-The logistic regression model maps a set of variables to a value from 0 to 1, interpretted as a probability of belonging to a class. To train and evaluate the model, we first need label a set of floes as true positives and false positives. We rely on the floe tracker to select true positive floes. We filter the tracked floes to only include those that traveled a total distance of at least a pixel, had average speeds greater than 0.01 m/s and less than 1.5 m/s, and were in a region with sea ice in the NSIDC sea ice concentration dataset. Next, we identify false positives in the floes with 0 sea ice concentration from NSIDC, anomalous floe length scale relative to the sea ice concentration, and with either circularity less than 0.2 or solidity less than 0.4. 
-
-We use the scikit-learn logistic regression cross validation function to fit the model. We use 10-fold cross validation. Data is split so that 2/3 of the random sample is used for training and 1/3 for testing. Model metrics:
-
-F1 score:  0.907  
-Recall:  0.893  
-Precision:  0.922  
 
 # Generating the README pdf file
 We use `pandoc` to convert the markdown file to PDF. After installing `pandoc` (e.g. using `homebrew` on mac) and a LaTeX interpreter, you can run the line
