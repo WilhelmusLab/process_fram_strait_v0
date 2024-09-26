@@ -1,5 +1,6 @@
 # Fram Strait sea ice floe segmentation and tracking from moderate-resolution optical imagery
-Rosalinda Lopez-Acosta, Daniel M. Watkins, Minki Kim, Ashfaq Ahmed, Ellen Buckley, Monica Wilhelmus
+Rosalinda Lopez-Acosta, Daniel M. Watkins, Minki Kim, Ashfaq Ahmed, Ellen 
+Buckley, Monica M. Wilhelmus
 
 The Ice Floe Tracker (IFT) algorithm automatically identifies sea ice floes in marginal ice zones from optical satellite imagery, then uses a feature-matching approach to track individual ice floe rotation and displacement. 
 The algorithm is described in Lopez-Acosta et al. (2019) and briefly summarized below.
@@ -51,6 +52,9 @@ cylc validate fram_strait_images && \
 cylc play fram_strait_images && \
 cylc tui fram_strait_images
 ```
+
+Data acknowledgement: We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Observing System Data and Information System (EOSDIS).
+
 
 ## Sea ice concentration data
 We use the sea ice concentration Climate Data Record (Meier et al., 2021). After downloading the 2003-2020 CDR data, change the `sic_loc` parameter in the script `03_extract_shape_properties` to point to this location. Sea ice concentration is interpolated to ice floe positions using nearest neighbors, thus preserving information on coast mask and land from the CDR.
